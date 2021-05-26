@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <script>
+    function backToSearch(){
+     var searchPage = localStorage.getItem("searchpage");
+     var fmlang = localStorage.getItem("fmlang");
+     window.location.href = searchPage + '?setLng=' + fmlang;
+   };
+ </script>
+
+<!--itemReceived function-->
+<script>
+  function itemReceived() {
+	/* !Needs work */ 
+	// Put in secret phrase field  
+   var secretPhrase = parent.passphrase;
+   var listingid=(getQueryVariable("itemid"));
+      
+   // Disable the button while NxtPass does its work
+   document.getElementById("buttonSection").innerHTML = "<a class=\"btn btn-success\" id=\"receivedButton\" type=\"button\"><span data-i18n=\"button_item_received\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;Processing...</span></a><a class=\"btn btn-danger\" id=\"notReceivedButton\" type=\"button\"><span data-i18n=\"button_item_not_received\">Item Not Received</span></a>";
+   
+   
+   $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'item_received', listing_id: listingid, messageToSeller: $('#messageToSeller').val(), messageToEscrowProvider: $('#messageToEscrowProvider').val(), usersSecretPhrase: secretPhrase },              
+    function(result){
+
+      var item_received_status = result.query_status;
+      if (item_received_status == 'good') {
+       
+       document.getElementById("successMessage").innerHTML="Success: You have marked this item as received and completed the escrow process. The seller will be paid.";  	   		
+     }
+     else {
+	   // Display failure message  
+       document.getElementById("successMessage").innerHTML=" Result: FAILURE to mark this item as received and complete the escrow process. The seller will not be paid.";  		
+     }
+    }, "json"); // Specifies JSON as the expected result
+ };
+</script> 
+<!--End itemReceived function-->
+
+
+<!--itemNotReceived function-->
+<script>
+  function itemNotReceived() {
+	/* !Needs work */ 
+	// Put in secret phrase field  
+   var secretPhrase = parent.passphrase;
+   var listingid=(getQueryVariable("itemid"));
+      
+   // Disable the button while NxtPass does its work
+   document.getElementById("buttonSection").innerHTML = "<a class=\"btn btn-success\" id=\"receivedButton\" type=\"button\"><span data-i18n=\"button_item_received\">Item Received</span></a><a class=\"btn btn-danger\" id=\"notReceivedButton\" type=\"button\"><span data-i18n=\"button_item_not_received\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;Processing...</span></a>";
+   
+   
+   $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'item_not_received', listing_id: listingid, messageToSeller: $('#messageToSeller').val(), messageToEscrowProvider: $('#messageToEscrowProvider').val(), usersSecretPhrase: secretPhrase },              
+    function(result){
+
+      var item_not_received_status = result.query_status;
+      if (item_not_received_status == 'good') {
+       
+       document.getElementById("successMessage").innerHTML="Success: You have marked this item as not received. Your escrow provider will be informed.";  	   		
+     }
+     else {
+	   // Display failure message  
+       document.getElementById("successMessage").innerHTML=" Result: FAILURE to mark this item as not received.";  		
+     }
+    }, "json"); // Specifies JSON as the expected result
+ };
+</script> 
+<!--End itemNotReceived function-->
+
+
+ <!--Start searchByItemID function-->
+ <script>
+  function searchByItemID(){
+   var listingid=(getQueryVariable("itemid"));
+   var loggedInAccount = sessionStorage.getItem("RSaccountNumber");
+
+    $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'searchSoldItem', listing_id: listingid, usersSecretPhrase: loggedInAccount },
+
+      function(result){
+
+    if (result.query_status == "bad")// If no results are returned
+    {// Open if statement
+
+      document.getElementById("successMessage").innerHTML="No listing found";
+
+    }// Close if statement
+    else {// Open else statement
+
+      var displayPrice = result.price/100000000;
+      sessionStorage.setItem("originalPrice", displayPrice);
+      document.getElementById("price").innerHTML= displayPrice.toFixed(8);
+
+		// Clean the listing ID
+		document.getElementById("itemID").innerHTML= escapeHtml(result.listing_id);
+
+		// Clean and translate the status
+   var untranslated = escapeHtml(result.item_status);
+   var translated = "";
+   if (untranslated == "Available"){
+    translated = $.t("available");
+  }
+  else if (untranslated == "Sold"){
+    translated = $.t("sold");
+  }
+  else if (untranslated == "Canceled"){
+    translated = $.t("canceled");
+  }
+  else if (untranslated == "Pending"){
+    translated = $.t("pending");
+  }
+  else {
+    translated = "Unknown";
+  }	                    
+
+  document.getElementById("status").innerHTML = translated;
+
+		// Clean the title
+		var cleanTitle = escapeHtml(result.item_title);
+		document.getElementById("title").innerHTML= cleanTitle;
+
+		// Clean the description
+		var cleanDescription = escapeHtml(result.item_description);
+		document.getElementById("description").innerHTML= cleanDescription;
+
+		// Clean the category
+		var cleanCategory = escapeHtml(result.category1);
+		document.getElementById("category").innerHTML= cleanCategory;		
+
+		// Create Seller ID link
+		var cleanSellerID = escapeHtml(result.seller_id);
+		document.getElementById("seller_id").innerHTML= "<a href='SearchBySellerID_single.html?sellerid=" + cleanSellerID + "' style='float: none;margin-right: 0px;margin-left: 0px;color:white;border: 0;display: inline;text-decoration: underline'>" + cleanSellerID + 
+		"</a>";
+
+		// Clean the main image URL
+		var main_image_url = escapeHtml(result.main_image_url);
+		
+		if (main_image_url){
+      document.getElementById("top_image").innerHTML="<img alt=\"\" src=\""+ main_image_url + "\">";
+    }		
+    var nxtDate	= result.start_timestamp;
+    var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+    var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+    var convertedListedTimeMoment = moment(nxtEpoch).add('seconds', nxtDate);
+    var convertedListedTime = moment(convertedListedTimeMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+
+        var nxtDateSold = result.sold_timestamp;
+        var convertedSoldMoment = moment(nxtEpoch).add('seconds', nxtDateSold);
+        var convertedSold = moment(convertedSoldMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+
+		// Clean the tags
+    var displayTags = '';
+    if (result.item_tag1){
+     displayTags += escapeHtml(result.item_tag1);
+   }
+   if (result.item_tag2){
+     displayTags += ', ' + escapeHtml(result.item_tag2);
+   }
+   if (result.item_tag3){
+     displayTags += ', ' + escapeHtml(result.item_tag3);
+   }
+
+   document.getElementById("sold").innerHTML= convertedSold;
+
+   document.getElementById("tags").innerHTML= displayTags;
+
+		// Clean additional image URLs
+		var additional_image_1_URL = escapeHtml(result.additional_image_1_URL);
+		var additional_image_2_URL = escapeHtml(result.additional_image_2_URL);
+		var additional_image_3_URL = escapeHtml(result.additional_image_3_URL);
+		
+		if (additional_image_1_URL){
+      var additional_images_section = '<div id="polaroid">';
+      additional_images_section += '<figure>';	
+      additional_images_section += '<img src="' + additional_image_1_URL + '" width="200" height="200" alt="Image 1" />';	
+      additional_images_section += '</figure>';	
+    }
+
+    if (additional_image_2_URL){
+     if (!additional_image_1_URL){
+      var additional_images_section = '<div id="polaroid">';
+    }
+    additional_images_section += '<figure>';	
+    additional_images_section += '<img src="' + additional_image_2_URL + '" width="200" height="200" alt="Image 2" />';	
+    additional_images_section += '</figure>';	
+  }
+
+  if (additional_image_3_URL){
+   if (!additional_image_1_URL && !additional_image_2_URL){
+    var additional_images_section = '<div id="polaroid">';
+  }
+  additional_images_section += '<figure>';	
+  additional_images_section += '<img src="' + additional_image_3_URL + '" width="200" height="200" alt="Image 3" />';	
+  additional_images_section += '</figure>';	
+}
+
+if (additional_images_section){
+  additional_images_section += '</div><br />';	
+  document.getElementById("extra_images_section").innerHTML=additional_images_section;
+}
+
+
+		}// Close else statement
+    }, "json"); // Specifies JSON as the expected result
+};
+</script>
+<!--End searchByItemID function-->
+
+
+</head>
+<body class="full-width" onload="setAccountNumber(); searchByItemID(); setLanguage(); setLanguageQueryStrings();">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js"> </script>
+    <!--end include main menu-->
+
+
+    <!--sidebar start-->
+
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+
+                <div id="backToSearchButton">
+                  <button type="button" class="btn btn-default" onclick="backToSearch()"><i class="fa fa-arrow-left"></i><span data-i18n="button_back_to_search">Back to Search</span></button></div>
+
+                </header>                          
+                <div class="panel-body">
+                 <div id="successMessage"> <!--Start of successMessage div-->
+                  <!--item widget start-->
+
+                  <aside class="profile-nav alt green-border">
+                    <section class="panel">
+                      <div class="user-heading alt green-bg">
+                        <a href="#">
+                          <span id="top_image"><img alt="" src="img/Box-icon.png"></span>
+                        </a>
+                        <h1 id="title">No Item Title</h1>
+                        <p><span data-i18n="item_id">Item ID</span>: <span id="itemID"></span></p>
+                        <p><span data-i18n="seller_id">Seller ID</span>: <span id="seller_id"></span></p>
+                        <p><span data-i18n="status">Status</span>: <span id="status"></span></p>
+                        <br />
+                        <hr>
+                        <p><i class="fa fa-tasks"></i> <span data-i18n="category">Category</span>: <span id="category"></span></a></p>
+                        <p><i class="fa fa-tags"></i> <span data-i18n="tags">Tags</span>: <span id="tags"></span></a></p>
+                        <p><i class="fa fa-clock-o"></i> <span data-i18n="sold_date"></span>: <span id="sold"></span></a></p>
+                        <p><i class="fa fa-money"></i> <span data-i18n="price_with_nxt">Price: NXT </span><span id="price"></span></a></p>
+                        <hr>
+                        <p><span data-i18n="description">Description</span><br /><span id="description"></span></p>
+                      </div>
+
+
+                    </section>
+                  </aside>
+                  <!--item widget end-->
+
+                  <!--additional images section start-->
+                  <div id="extra_images_section"></div>
+                  <!--additional images section end-->
+
+
+<!-- !Needs work -->
+<!-- Limit display to Sold items with the right escrow status -->
+                <hr>
+                <div id="messageSection">	 <!--Encrypted message to buyer-->
+                   <div class="form-group">
+                     <label for="messageToSeller"><span data-i18n="message_to_seller">Message to Seller</span></label>
+                     <div class="iconic-input">
+                       <i class="fa fa-bullhorn"></i>
+                       <input type="text" class="form-control" data-i18n="[placeholder]placeholder_message_to_seller" id="messageToSeller">
+                     </div>
+                   </div>
+                </div> <!--End of messageSection div-->
+
+                <div id="escrowMessageSection">	 <!--Encrypted message to escrow provider-->
+                   <div class="form-group">
+                     <label for="messageToEscrowProvider"><span data-i18n="message_to_escrow_provider">Message to Escrow Provider</span></label>
+                     <div class="iconic-input">
+                       <i class="fa fa-bullhorn"></i>
+                       <input type="text" class="form-control" data-i18n="[placeholder]placeholder_message_to_seller" id="messageToEscrowProvider">
+                     </div>
+                   </div>
+                </div> <!--End of escrowMessageSection div-->
+
+                <div id="buttonSection" class="form-group">
+                    <a class="btn btn-success" id="receivedButton" onclick="itemReceived()" type="button">
+                     <span data-i18n="button_item_received">Item Received</span></a>
+                    <a class="btn btn-danger" id="notReceivedButton" onclick="itemNotReceived()" type="button">
+                     <span data-i18n="button_item_not_received">Item Not Received</span></a>
+                </div> <!--End of buttonSection div-->
+
+
+
+                </div> <!--End of successMessage div-->
+              </section>
+            </div>                      
+          </section>
+        </div>
+
+
+        <!-- page end-->
+      </section>
+    </div>
+  </section>
+</section>
+<!--main content end-->
+
+<!-- js placed at the end of the document so the pages load faster -->
+<script src="js/jquery-1.11.1.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+<script src="js/bootstrap-hover-dropdown.min.js"></script>
+<script src="js/respond.min.js" ></script>
+<script src="js/moment.min.js"></script>
+
+<!--common script for all pages-->
+<script src="js/freemarket_scripts.js"></script>
+<script src="js/common-scripts.js"></script>
+<script src="js/i18next-1.7.4.min.js"></script>
+<script src="js/freemarket_localization_scripts.js"></script>
+
+  <script type="text/javascript">
+	  // Get the Pending sales count if the user is logged in
+	  // Is the user logged in?
+	  var loginStatus = sessionStorage.getItem("loginStatus");
+	  if (loginStatus == 'loggedin') {// User is logged in, so check to see if there are any Pending Sales
+  		// Create localized text for use in the notification menu
+  		var translatedPendingSales = $.t("pending_sales_menu_header");
+  		var displayPendingMenu = "no";
+		var fmlang = localStorage.getItem("fmlang");
+        // Yell at the console
+        console.log ("User is logged in, checking Pending Sales.");
+        $(document).ready(function() {
+		var loggedInAccount = sessionStorage.getItem("RSaccountNumber");
+        $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'ownListings', account: loggedInAccount },              
+          function(data) {
+                  if (data.query_status == "bad")// If no results are returned
+                  {// Open if statement
+					  document.getElementById("error-message").innerHTML = "<p class=\"validation_message\">Error: Please ensure that NXT is running.</p><p></p>";
+                  }// Close if statement
+                  else {// Open else statement - own_listings query did not fail
+	                  
+                    for (var i = 0; i < data['items'].length; i++) {
+                      var pending_count = data.items[i].pending_count;
+                      var originalQuantity = data.items[i].quantity; // For use below to see if quantity ordered equals the original quantity listed
+					  // Calculate expired or not expired status, since the item_statuses API does not report expired status correctly
+					  // Get end datestamp
+					  var endDate = escapeHtml(data.items[i].end_timestamp);
+					  // Get the current datestamp for comparison
+					  var currentTime = Date.now();
+					  // Use moment library to convert current time to NXT timestamp
+					  var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+					  var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+					  var recalculatedEndDate = moment(nxtEpoch).add('seconds', endDate);
+					  
+						  // Compare the item's end date to the current time
+						  if (recalculatedEndDate < currentTime) {
+						  // Also set a variable to keep up from looking for buying_ids below, since it's not needed for expired items
+						  var expired = "yes";
+				            }
+				            else { // If item is not expired
+							var expired = "no";
+				            }
+			            			            							                  			                    
+	                  // Now see if this item has any Pending sales
+	                  if (pending_count > 0 && expired == "no") { // If 1 or more pending sales, each sale gets a separate table row
+		                  	  // Set a variable to indicate that the menu will be displayed, because there is at least one pending sale
+		                  	  displayPendingMenu = "yes";
+                      } // End if pending count > 0
+                  };// Close for loop - for each item returned by own_listings
+                  }// Close else statement - this all happens if own_listings does not return an error
+					// Maybe here is the place to display the Pending Notification if the variable is set to Yes
+						if (displayPendingMenu == "yes") {
+					      // Yell at the console
+					      console.log ("Better display that notification!");
+					      var notificationMenuContents = "<div class=\"nav notify-row\" id=\"pending_notice\"><a href=\"ViewYourPendingSales.html?setLng=";
+					      notificationMenuContents += fmlang;
+					      notificationMenuContents += "\"><button class=\"btn btn-white\"><i class=\"fa fa-shopping-cart text-info\"></i> ";
+					      notificationMenuContents += translatedPendingSales;
+					      notificationMenuContents += "</button></a></div>";
+					      document.getElementById("pendingNotification").innerHTML = notificationMenuContents;
+						  }
+						else {
+					      // Yell at the console
+					      console.log ("No need to display that pending notification!");
+						  }
+                  
+				  }, "json"); // Specifies JSON as the expected result
+} );
+}
+else {
+      // Yell at the console
+      console.log ("User is not logged in, no need to report Pending Sales.");
+	
+} 
+</script>
+
+
+</body>
+</html>

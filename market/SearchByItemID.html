@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <script>
+  function goToPage() {
+    var id = document.getElementById('listingid').value;
+    var fmlang = localStorage.getItem("fmlang");
+    var searchstorage = localStorage.setItem("searchpage", "SearchByItemID.html");
+    if (!id) {
+      document.getElementById("listingidErrorMessage").innerHTML = "<p class=\"validation_message\">An item ID is required.</p>";
+    } else {
+      window.location.assign("SearchByItemID_Results.html?setLng=" + fmlang + "&itemid=" + id);
+    }
+  };
+  </script>
+
+</head>
+
+<body class="full-width" onload="setAccountNumber(); setLanguage(); setLanguageQueryStrings();">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+    <!--sidebar start-->
+
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <span data-i18n="header_search_by_item_id">Search by Item ID</span>
+              </header>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label for="listingid"><span data-i18n="item_id">Item ID</span></label>
+                  <div class="iconic-input">
+                    <i class="fa fa-search"></i>
+                    <input type="text" class="form-control" data-i18n="[placeholder]placeholder_required" id="listingid" autofocus>
+                    <div id="listingidErrorMessage"></div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-default" onclick="goToPage()"><span data-i18n="button_search">Search</span></button>
+              </div>
+            </section>
+          </div>
+
+          <div id="searchResults">
+          </div>
+
+          <!-- page end-->
+        </div>
+      </section>
+    </section>
+  </section>
+  <!--main content end-->
+
+  <!-- js placed at the end of the document so the pages load faster -->
+  <script src="js/jquery-1.11.1.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+  <script src="js/bootstrap-hover-dropdown.min.js"></script>
+  <script src="js/respond.min.js"></script>
+
+  <!--common script for all pages-->
+  <script src="js/freemarket_scripts.js"></script>
+  <script src="js/common-scripts.js"></script>
+  <script src="js/i18next-1.7.4.min.js"></script>
+  <script src="js/freemarket_localization_scripts.js"></script>
+
+  <script src="js/moment.min.js"></script>
+  <script src="js/pending_sales_notice.js"></script>
+
+</body>
+</html>

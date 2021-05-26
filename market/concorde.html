@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="Mosaddek">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  
+  <!-- Script for sorting JSON -->
+  <script type="text/javascript" src="js/objSort.js"></script>
+  <!-- Script for date manipulation -->
+  <!-- <script src="js/moment.min.js"></script> -->
+
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltips and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+<script>
+function displayEscrows() {
+
+        // Disable and animate Refresh button
+		document.getElementById("refreshButtonSection").innerHTML = "<button type=\"button\" id=\"refreshButton\" class=\"btn btn-default btn-xs\"><i class=\"fa fa-refresh fa-spin\"></i> Refresh</button>";
+
+    	// POST the request
+        $.post( "http://localhost:17775/concorde", { requestType:'getLocks' },
+        		
+        function(result){
+
+        // If no results are returned
+        if (result.query_status == "bad") {    
+
+          document.getElementById("concordeResults").innerHTML = "<p class=\"validation_message\">Error: Query status is \"bad.\"</p><p></p>";
+          // Re-enable Refresh button
+          document.getElementById("refreshButtonSection").innerHTML = "<button type=\"button\" id=\"refreshButton\" class=\"btn btn-warning btn-xs\" onclick=\"displayEscrows();\"><i class=\"fa fa-refresh\"></i> Refresh</button>";
+
+        } else { // Open else for displaying Concorde results
+
+			// Sort the result by each escrow's lock height, in descending order
+			var sortArray = result['locks'];
+			result=sortArray.objSort("lock_height", -1);
+			// In case you need to see what just happened: 
+			//var indentedText = JSON.stringify(result,null,4);
+			//document.write("<h1>Result</h1> <pre>"+indentedText+"</pre>");
+			
+        	// Parse out what comes back
+        	var replace_concordeResults = "<table class=\"table table-hover p-table\">"; // Start with the table tags
+				replace_concordeResults += "<thead>"; 
+				replace_concordeResults += "<tr>"; 
+				replace_concordeResults += "<th>Lock ID</th>"; 
+				replace_concordeResults += "<th>Peer A (Buyer)</th>"; 
+				replace_concordeResults += "<th>Escrow Status</th>"; 
+				replace_concordeResults += "<th>Peer B (Seller)</th>"; 
+				replace_concordeResults += "<th>Payment</th>"; 
+				replace_concordeResults += "</tr>"; 
+				replace_concordeResults += "</thead>"; 
+				replace_concordeResults += "<tbody>"; 
+			for (var i = 0; i < result.length; i++) {// Loop through Locks
+				 // Set the status image
+				 if (result[i].status == 'PAYED_A') {
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-success btn-sm\"><i class=\"fa fa-chevron-circle-left\"></i> Payed A</button>";
+				 }
+				 else if (result[i].status == 'PAYED_B'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-success btn-sm\"></i>Payed B <i class=\"fa fa-chevron-circle-right \"></button>";
+				 }
+				 else if (result[i].status == 'FROZEN'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-danger btn-sm\"><i class=\"fa fa-warning\"></i> Frozen</button>";
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-danger btn-sm\"><i class=\"fa fa-warning\"></i> Frozen A</button>";
+				     var nxtDate = result[i].freeze_timeout;
+				     //var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+				     //var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+				     //var convertedTimeoutMoment = moment(nxtEpoch).add('seconds', nxtDate);
+				     //var convertedTimeout = moment(convertedTimeoutMoment).format("MMMM Do YYYY, h:mm:ss a");
+				     //var timeoutDisplay = convertedTimeout;
+				     var timeoutDisplay = nxtDate;
+				 }
+				 else if (result[i].status == 'FROZEN_A'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-danger btn-sm\"><i class=\"fa fa-warning\"></i> Frozen A</button>";
+				     var nxtDate = result[i].lock_timeout;
+				     //var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+				     //var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+				     //var convertedTimeoutMoment = moment(nxtEpoch).add('seconds', nxtDate);
+				     //var convertedTimeout = moment(convertedTimeoutMoment).format("MMMM Do YYYY, h:mm:ss a");
+				     //var timeoutDisplay = convertedTimeout;
+				     var timeoutDisplay = nxtDate;
+				 }
+				 else if (result[i].status == 'FROZEN_B'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-danger btn-sm\"></i>Frozen B <i class=\"fa fa-warning\"></button>";
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-danger btn-sm\"><i class=\"fa fa-warning\"></i> Frozen A</button>";
+				     var nxtDate = result[i].lock_timeout;
+				     //var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+				     //var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+				     //var convertedTimeoutMoment = moment(nxtEpoch).add('seconds', nxtDate);
+				     //var convertedTimeout = moment(convertedTimeoutMoment).format("MMMM Do YYYY, h:mm:ss a");
+				     //var timeoutDisplay = convertedTimeout;
+				     var timeoutDisplay = nxtDate;
+				 }
+				 else if (result[i].status == 'LOCKED'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-warning btn-sm\"><i class=\"fa fa-lock\"></i> Locked <i class=\"fa fa-lock\"></i></button>";
+				     var nxtDate = result[i].lock_timeout;
+				     //var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+				     //var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+				     //var convertedTimeoutMoment = moment(nxtEpoch).add('seconds', nxtDate);
+				     //var convertedTimeout = moment(convertedTimeoutMoment).format("MMMM Do YYYY, h:mm:ss a");
+				     //var timeoutDisplay = convertedTimeout;
+				     var timeoutDisplay = nxtDate;
+				 }
+				 else if (result[i].status == 'UNLOCKED_A'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-warning btn-sm\"><i class=\"fa fa-unlock\"></i> Unlocked A</button>";
+				 }
+				 else if (result[i].status == 'UNLOCKED_B'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-warning btn-sm\"></i>Unlocked B <i class=\"fa fa-unlock\"></button>";
+				 }
+				 else if (result[i].status == 'REWARD'){
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-info btn-sm\"></i><i class=\"fa fa-trophy\"> Reward <i class=\"fa fa-trophy\"></button>";
+				 }
+				 else {
+					 var statusIcon = "<button type=\"button\" class=\"btn btn-default btn-sm\"><i class=\"fa fa-question-circle\"></i> Unknown</button>";
+				 }
+				 replace_concordeResults += "<tr>"; 
+				 replace_concordeResults += "<td class=\"p-name\"><b>" + result[i].lock_id + "</b><br>"; 
+				 replace_concordeResults += "<small>Lock Height: " + result[i].lock_height + "</small>";
+				 switch (timeoutDisplay != null) {
+				 		case true:
+				 		replace_concordeResults += "<br /><small>Timeout: " + timeoutDisplay + "</small>";
+				 		timeoutDisplay = null;
+				 			break;
+				 		case false:
+				 		replace_concordeResults += "<br /><small>Finalized</small>";
+				 			break;
+				  };
+				 replace_concordeResults += "</td>"; 
+				 replace_concordeResults += "<td>" + result[i].peer_a + "</td>";
+				 replace_concordeResults += "<td>" + statusIcon;
+				 replace_concordeResults += "</td>";
+				 replace_concordeResults += "<td>" + result[i].peer_b + "</td>";
+				 replace_concordeResults += "<td>" + result[i].payment/100000000 + "</td>";
+				 replace_concordeResults += "</tr>"; // Close the row
+			}// End of looping through Locks
+				 replace_concordeResults += "</tbody>"; // Close the table body
+				 replace_concordeResults += "</table>"; // Close the table 
+          document.getElementById("concordeResults").innerHTML=replace_concordeResults;
+          // Re-enable Refresh button
+          document.getElementById("refreshButtonSection").innerHTML = "<button type=\"button\" id=\"refreshButton\" class=\"btn btn-warning btn-xs\" onclick=\"displayEscrows();\"><i class=\"fa fa-refresh\"></i> Refresh</button>";
+
+          }// Close else for displaying Concorde results
+        }, "json"); // Specifies JSON as the expected result
+
+	
+};
+</script>
+	
+
+
+
+</head>
+
+<body class="full-width" onload="displayEscrows();">
+
+  <section id="container" class="">
+    <!--header start-->
+    <header class="header white-bg">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="fa fa-ellipsis-v"></span>
+        </button>
+
+        <!--logo start-->
+        <a id="logo_link" href="index.html?setLng=en" class="logo" >Con<span>corde</span></a>
+        <!--logo end-->
+        <div class="horizontal-menu navbar-collapse collapse ">
+          <ul class="nav navbar-nav">
+            <li class="dropdown">
+          </ul>
+
+        </div>
+        <div class="top-nav ">
+          <ul class="nav pull-right top-menu">
+            <li>
+
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+    </header>
+    <!--header end-->
+    <!--sidebar start-->
+
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <b>Escrow Statuses</b>
+						<span class="pull-right">
+						  <div id="refreshButtonSection">
+                          <button type="button" id="refreshButton" class="btn btn-warning btn-xs" onclick="displayEscrows();"><i class="fa fa-refresh"></i> Refresh</button>
+						  </div>
+                        </span>              
+              </header>                          
+              <div class="panel-body">
+	                  <div id="concordeResults"></div>
+                  </table>
+              </section>
+              <!-- page end-->
+
+
+           </div>
+         </section>
+       </div>
+
+
+
+
+
+       <!-- page end-->
+     </section>
+   </div>
+ </section>
+</section>
+<!--main content end-->
+
+<!-- js placed at the end of the document so the pages load faster -->
+<script src="js/jquery-1.11.1.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+<script src="js/bootstrap-hover-dropdown.min.js"></script>
+<script src="js/respond.min.js" ></script>
+
+<!--common script for all pages-->
+<script src="js/freemarket_scripts.js"></script>
+<script src="js/common-scripts.js"></script>
+
+</body>
+</html>

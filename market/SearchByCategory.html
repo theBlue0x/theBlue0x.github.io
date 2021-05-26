@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+
+  <link href="assets/datatables/css/demo_page.css" rel="stylesheet" />
+  <link href="assets/datatables/css/demo_table.css" rel="stylesheet" />
+  <link href="assets/datatables/DT_bootstrap.css" rel="stylesheet" />
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+</head>
+
+<body class="full-width" onload="setAccountNumber(); setLanguage(); setLanguageQueryStrings();">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+    <!--sidebar start-->
+
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper site-min-height">
+        <!-- page start-->
+        <div class="row">
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <span data-i18n="header_search_by_category">Search by Item Category</span>
+              </header>
+              <div class="panel-body">
+                <div id="error-message">
+                  <div class="adv-table">
+                    <table class="display table table-bordered table-striped" id="example">
+                      <thead>
+                        <tr>
+                          <th><span data-i18n="image">Image</span></th>
+                          <th><span data-i18n="category">Category</span></th>
+                          <th><span data-i18n="item_title">Title</span></th>
+                          <th class="hidden-phone"><span data-i18n="price">Price</span></th>
+                          <th class="hidden-phone"><span data-i18n="status">Status</span></th>
+                        </tr>
+                      </thead>
+                      <tfoot>
+                        <tr>
+                          <th><span data-i18n="image">Image</span></th>
+                          <th><span data-i18n="category">Category</span></th>
+                          <th><span data-i18n="item_title">Title</span></th>
+                          <th class="hidden-phone"><span data-i18n="price">Price</span></th>
+                          <th class="hidden-phone"><span data-i18n="status">Status</span></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <!-- page end-->
+      </section>
+    </section>
+    <!--main content end-->
+
+    <!--viewAll script-->
+    <script>
+    function fetchStatuses() {
+      var oTable = $('#example').dataTable();
+      var data = oTable._('tr', {
+        page: "current"
+      });
+      var listings = new Array();
+
+      //get all listings for the page
+      for (i = 0; i < data.length; i++) {
+        listings.push(data[i][5]);
+      }
+
+      //remove duplicates
+      var cleanlist = $.unique(listings);
+
+      //format data in object NxtPass expects (reusing previous var..)
+      listings = new Array();
+      for (i = 0; i < cleanlist.length; i++) {
+        listings.push({
+          "listing_id": cleanlist[i]
+        });
+      }
+
+      //create request object
+      var request = {
+        "items": listings
+      };
+
+      var listing_statuses;
+      $.post(Constants.nxtpassApiUrl, "requestType=item_statuses&jsonData=" + JSON.stringify(request),
+        function(data) {
+          update_statuses(data);
+        },
+        "json"
+      );
+    }
+
+    function update_statuses(listing_statuses) {
+      var oTable = $('#example').DataTable();
+      //select just currently visible rows
+      var rows = oTable.rows({
+        page: "current"
+      });
+      //grab the data for those rows
+      var data = rows.data();
+
+      //loop through each row
+      for (i = 0; i < data.length; i++) {
+        //loop through each item status returned from NxtPass
+        for (a = 0; a < listing_statuses.items.length; a++) {
+          //if listing_id match then update the status column in the data
+          if (listing_statuses.items[a].listing_id == data[i][5]) {
+            var untranslated = escapeHtml(listing_statuses.items[a].item_status);
+            var translated = "";
+            if (untranslated == "Available") {
+              translated = $.t("available");
+            } else if (untranslated == "Sold") {
+              translated = $.t("sold");
+            } else if (untranslated == "Canceled") {
+              translated = $.t("canceled");
+            } else if (untranslated == "Pending") {
+              translated = $.t("pending");
+            } else {
+              translated = "Unknown";
+            }
+            data[i][4] = translated;
+            break;
+          }
+        }
+      }
+
+      //redraw all the changes
+      rows.invalidate();
+    }
+    </script>
+    <!--End viewAll script-->
+
+    <!-- js placed at the end of the document so the pages load faster -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+    <script src="js/bootstrap-hover-dropdown.min.js"></script>
+    <script src="js/respond.min.js"></script>
+
+    <!--common script for all pages-->
+    <script src="js/constants.js"></script>
+    <script src="js/freemarket_scripts.js"></script>
+    <script src="js/common-scripts.js"></script>
+    <script src="js/i18next-1.7.4.min.js"></script>
+    <script src="js/freemarket_localization_scripts.js"></script>
+
+    <script src="assets/datatables/jquery.dataTables2.min.js"></script>
+    <script src="assets/datatables/DT_bootstrap.js"></script>
+    <script src="assets/datatables/dataTables.fixedHeader.min.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/pending_sales_notice.js"></script>
+
+    <script>
+    ///HACK: do not forget to have jquery and scripts above our calls
+    $(document).ready(function() {
+      var current_lang = getSearchMenuLocalised();
+      var table = $('#example').DataTable({
+        "columns": [{
+            "searchable": false
+          },
+          null, {
+            "searchable": false
+          }, {
+            "searchable": false
+          }, {
+            "searchable": false
+          }
+        ],
+        "language": current_lang,
+        "aaSorting": [
+          [1, "asc"]
+        ],
+        "stateSave": true,
+        "iDisplayLength": 50,
+        "aoColumnDefs": [{
+          "bSortable": false,
+          "aTargets": [0, 4]
+        }],
+        "fnInitComplete": function() {
+          $("#example_filter input").focus();
+        }
+      });
+
+      // POST the request
+      $.post(Constants.nxtpassApiUrl, {
+          requestType: 'allListings'
+        },
+        function(data) {
+
+          if (data.query_status == "bad") {
+            // If no results are returned
+            document.getElementById("error-message").innerHTML = "<p class=\"validation_message\">Error: Please ensure that NXT is running.</p><p></p>";
+          } else {
+
+            for (var i = 0; i < data['items'].length; i++) {
+              // Set the currency
+              var displayCurrency = 'NXT';
+              var displayPrice = data.items[i].price / 100000000 + " " + displayCurrency;
+
+              if (data.items[i].currency == Constants.coinoUsdAssetName) { // This is priced in CoinoUSD
+                displayCurrency = 'CoinoUSD';
+                displayPrice = data.items[i].price / 100 + " " + displayCurrency;
+              }
+
+              // Set links based on item availability
+              var displayStatus = '';
+              var linkStatus = '<a href="SearchByItemID_Results.html';
+              var listImage = '<i class="fa fa-picture-o fa-3x"></i>';
+              if (data.items[i].main_image_url > "") {
+
+                // Clean image URL
+                var cleanURL = escapeHtml(data.items[i].main_image_url);
+                listImage = '<img src="' + cleanURL + '" alt="Item Thumbnail Image" height="40" width="40">';
+              }
+
+              // Clean title and category fields
+              var cleanTitle = escapeHtml(data.items[i].item_title);
+              var cleanCategory = escapeHtml(data.items[i].category1);
+
+              // Clean listing id field
+              var cleanListingID = escapeHtml(data.items[i].listing_id);
+
+              var fmlang = localStorage.getItem("fmlang");
+              var searchstorage = localStorage.setItem("searchpage", "SearchByCategory.html");
+
+              table.rows.add([
+                [
+                  listImage,
+                  cleanCategory,
+                  linkStatus + '?setLng=' + fmlang + '&itemid=' + cleanListingID + '">' + cleanTitle + '</a>',
+                  displayPrice,
+                  displayStatus,
+                  data.items[i].listing_id
+                ],
+              ]).draw();
+
+            }; // Close for loop
+
+            //fetch the status for initial page
+            fetchStatuses();
+
+          } // Close else statement
+
+          //set up fetch status on each page redraw
+          $('#example').on('draw.dt', function() {
+            fetchStatuses();
+          });
+
+        }, "json"); // Specifies JSON as the expected result
+    });
+    </script>
+
+</body>
+</html>

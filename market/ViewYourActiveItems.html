@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+  <title>Blue0x.io Market</title>
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+  <link href="assets/datatables/css/demo_page.css" rel="stylesheet" />
+  <link href="assets/datatables/css/demo_table.css" rel="stylesheet" />
+  <link href="assets/datatables/DT_bootstrap.css" rel="stylesheet" />
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltips and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+</head>
+
+<script>
+// Redirect the user if the user is not already logged in
+function checkLogin() {
+  var loginStatus = sessionStorage.getItem("loginStatus");
+  if (loginStatus == 'notloggedin') {
+    localStorage.setItem("lastpage", "ViewYourActiveItems.html"); // set the page for the Continue button on Login Notice page
+    var fmlang = localStorage.getItem("fmlang");
+    window.location.href = 'login_notice.html' + '?setLng=' + fmlang;
+  }
+};
+</script>
+
+<body class="full-width" onload="setAccountNumber(); checkLogin(); setLanguage(); setLanguageQueryStrings();">
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+    <!--sidebar start-->
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper site-min-height">
+        <!-- page start-->
+        <div class="row">
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <span data-i18n="header_all_your_active_items">All Your Active Items</span>
+              </header>
+              <div class="panel-body">
+                <div id="error-message">
+                  <div class="adv-table">
+                    <table class="display table table-bordered table-striped" id="example">
+                      <thead>
+                        <tr>
+                          <th><span data-i18n="image">Image</span></th>
+                          <th><span data-i18n="item_id">Item ID</span></th>
+                          <th><span data-i18n="item_title">Title</span></th>
+                          <th class="hidden-phone"><span data-i18n="price">Price</span></th>
+                          <th class="hidden-phone"><span data-i18n="status">Status</span></th>
+                        </tr>
+                      </thead>
+                      <tfoot>
+                        <tr>
+                          <th><span data-i18n="image">Image</span></th>
+                          <th><span data-i18n="item_id">Item ID</span></th>
+                          <th><span data-i18n="item_title">Title</span></th>
+                          <th class="hidden-phone"><span data-i18n="price">Price</span></th>
+                          <th class="hidden-phone"><span data-i18n="status">Status</span></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <!-- page end-->
+      </section>
+    </section>
+    <!--main content end-->
+
+    <!-- js placed at the end of the document so the pages load faster -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+    <script src="js/bootstrap-hover-dropdown.min.js"></script>
+    <script src="js/respond.min.js"></script>
+
+    <!--common script for all pages-->
+    <script src="js/constants.js"></script>
+    <script src="js/freemarket_scripts.js"></script>
+    <script src="js/common-scripts.js"></script>
+    <script src="js/i18next-1.7.4.min.js"></script>
+    <script src="js/freemarket_localization_scripts.js"></script>
+    <script src="assets/datatables/jquery.dataTables2.min.js"></script>
+    <script src="assets/datatables/DT_bootstrap.js"></script>
+    <script src="assets/datatables/dataTables.fixedHeader.min.js"></script>
+
+    <script src="js/moment.min.js"></script>
+    <script src="js/pending_sales_notice.js"></script>
+
+    <script>
+    ///HACK: do not forget to have jquery and scripts above our calls
+    $(document).ready(function() {
+      var current_lang = getSearchMenuLocalised();
+      var loggedInAccount = sessionStorage.getItem("RSaccountNumber");
+      var table = $('#example').DataTable({
+        "language": current_lang,
+        "aaSorting": [
+          [0, "asc"]
+        ],
+        "stateSave": true,
+        "iDisplayLength": 50,
+        "fnInitComplete": function() {
+          $("#example_filter input").focus();
+        }
+      });
+      $.post(Constants.nxtpassApiUrl, {
+          requestType: 'ownListings',
+          account: loggedInAccount
+        },
+        function(data) {
+          if (data.query_status == "bad")
+          {
+            document.getElementById("error-message").innerHTML = "<p class=\"validation_message\">Error: Please ensure that NXT is running.</p><p></p>";
+          }
+          else {
+
+            for (var i = 0; i < data['items'].length; i++) {
+
+              // Gather some data about the item for calculation below
+              var pending_count = data.items[i].pending_count; // The pending count
+              var originalQuantity = parseInt(data.items[i].quantity); // The quantity initially available
+              sessionStorage.setItem("startQuantity", originalQuantity); // In case we need this in session storage
+
+              // Expired items do not belong in the Active Items view - there is a separate view for that, so exclude them
+              // Calculate expired or not expired status, since the item_statuses API does not report expired status
+              // Get end datestamp
+              var endDate = escapeHtml(data.items[i].end_timestamp);
+
+              // Get the current datestamp for comparison
+              var currentTime = Date.now();
+              // Use moment library to convert current time to NXT timestamp
+              var unixEpoch = moment("1970-01-01T00:00:00.0Z");
+              var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+              var recalculatedEndDate = moment(nxtEpoch).add('seconds', endDate);
+
+              // Compare the item's end date to the current time
+              if (recalculatedEndDate < currentTime) {
+                // Note this fact in the console, and that is it.
+                console.log("This item is expired: " + data.items[i].listing_id);
+              } else {
+                // If item is NOT expired, continue on...
+                // Now see if this item has any Pending sales, and if so, do some extra processing.
+                // We only want to include an item in the Active Items view if it is still available.
+                // So if the pending count is less than the original quantity available, then we display it.
+                // Otherwise, if the all of the items are pending, we do not display it.
+
+                if (pending_count >= originalQuantity) {
+                  // All items are pending, so no need to display as an Active Item
+                  // Yell at the console
+                  var listingid = data.items[i].listing_id;
+                  var quantityStillAvailable = (originalQuantity - pending_count);
+                  console.log("Pending item found: the listingid is " + listingid + " the quantity still for sale is " + quantityStillAvailable + ".");
+                  console.log("If the quantity still for sale is anything other than zero, then there is a bug. Please report.");
+
+                } // End if all items are pending
+                else {
+                  // Otherwise, check for Available status. If Available, list it; if not (Canceled), do not list it.
+                  // Clean listing id field
+                  var cleanListingID = escapeHtml(data.items[i].listing_id);
+                  $.post(Constants.nxtpassApiUrl, {
+                      requestType: 'getItemPublic',
+                      listing_id: cleanListingID
+                    },
+                    function(item) {
+
+                      // This is to get the status, which should be either Available or Canceled at this point
+                      var itemID = item.listing_id;
+                      console.log("getItemPublic running for listing ID " + itemID + ".");
+                      var status = item.item_status;
+                      if (status === "Available") {
+                        console.log("Listing ID " + itemID + " has status of Available.");
+                        var displayStatus = 'Available';
+                        // Set the currency
+                        var displayCurrency = 'NXT';
+                        var displayPrice = item.price / 100000000 + " " + displayCurrency;
+                        if (item.currency == Constants.coinoUsdAssetName) {
+                          displayCurrency = 'CoinoUSD';
+                          displayPrice = item.price / 100 + " " + displayCurrency;
+                        }
+
+                        var linkStatus = '<a href="ViewYourItemSingle.html';
+                        // Clean title field
+                        var cleanTitle = escapeHtml(item.item_title);
+                        var fmlang = localStorage.getItem("fmlang");
+                        var searchstorage = localStorage.setItem("searchpage", "ViewYourActiveItems.html");
+                        var listImage = '<i class="fa fa-picture-o fa-3x"></i>';
+                        if (item.main_image_url > "") {
+                          // Clean image URL
+                          var cleanURL = escapeHtml(item.main_image_url);
+                          listImage = '<img src="' + cleanURL + '" alt="Item Thumbnail Image" height="40" width="40">';
+                        }
+
+                        table.rows.add([
+                          [
+                            listImage,
+                            linkStatus + '?setLng=' + fmlang + '&itemid=' + itemID + '">' + itemID + '</a>',
+                            linkStatus + '?setLng=' + fmlang + '&itemid=' + itemID + '">' + cleanTitle + '</a>',
+                            displayPrice,
+                            displayStatus,
+                            itemID
+                          ],
+                        ]).draw();
+
+                      } else {
+                        // Yell at the console
+                        console.log("Canceled item found, listing ID: " + cleanListingID + ".");
+                      }
+
+                    }, "json"); // Specifies JSON as the expected result
+
+                } // End of else for non-Pending items
+
+              } // End of else for non-expired items
+
+            }; // Close for loop
+
+            var rows = table.rows({
+              page: "current"
+            }).data();
+
+            if(rows.length > 0) {
+
+              //fetch the status for initial page
+              fetchStatuses();
+            } else {
+
+              var oTable = $('#example').dataTable();
+              oTable.fnDestroy();
+
+              current_lang.sEmptyTable = current_lang.sZeroRecords;
+              table = $('#example').DataTable({
+
+                "language": current_lang,
+                "aaSorting": [
+                  [0, "asc"]
+                ],
+                "stateSave": true,
+                "iDisplayLength": 50,
+                "fnInitComplete": function() {
+                  $("#example_filter input").focus();
+                }
+              });
+            }
+
+          } // Close else statement for non-bad query
+        }, "json"); // Specifies JSON as the expected result
+    });
+    </script>
+
+</body>
+</html>

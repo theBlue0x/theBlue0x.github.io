@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="Mosaddek">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <script>
+  // Set button text on page load
+  function setButtonText() {
+    // Translate the button text
+    var translatedConvertButtonText = $.t("button_convert");
+    document.getElementById("convertButtonText").innerHTML = translatedConvertButtonText;
+    document.getElementById("convertButtonText2").innerHTML = translatedConvertButtonText;
+  };
+  </script>
+
+  <script>
+  function setCurrencySymboltoDollar(obj) {
+    if (obj.checked) {
+      document.getElementById("symbol").innerHTML = "<i class=\"fa fa-usd\"></i>";
+    }
+  };
+  </script>
+
+  <script>
+  function setCurrencySymboltoEuro(obj) {
+    if (obj.checked) {
+      document.getElementById("symbol").innerHTML = "<i class=\"fa fa-eur\"></i>";
+    }
+  };
+  </script>
+
+  <script>
+  function setCurrencySymboltoBTC(obj) {
+    if (obj.checked) {
+      document.getElementById("symbol").innerHTML = "<i class=\"fa fa-btc\"></i>";
+    }
+  };
+  </script>
+
+  <script type="text/javascript">
+  function testFieldPrice(field) {
+    var regExpr = new RegExp("^[0-9]+(\.[0-9]{1,10})?$");
+    if (!regExpr.test(field.value)) {
+      // Case of error
+      field.value = "";
+      document.getElementById("value_to_convertErrorMessage").innerHTML = "<p class=\"validation_message\">The value may only contain numbers and a decimal.</p>";
+    } else {
+      document.getElementById("value_to_convertErrorMessage").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script type="text/javascript">
+  function testFieldPrice2(field) {
+    var regExpr = new RegExp("^[0-9]+(\.[0-9]{1,10})?$");
+    if (!regExpr.test(field.value)) {
+      // Case of error
+      field.value = "";
+      document.getElementById("value_to_convertErrorMessage2").innerHTML = "<p class=\"validation_message\">The value may only contain numbers and a decimal.</p>";
+    } else {
+      document.getElementById("value_to_convertErrorMessage2").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script>
+  function getBTCRate() {
+    var conversionURL = "http://api.cryptocoincharts.info/tradingPair/btc_usd"
+      // Request up to date conversion rate info from Cryptonator
+    $.getJSON(conversionURL,
+
+      function(result) {
+        // Set the conversion rates
+        var btcRate = result.price;
+        sessionStorage.setItem("btcRate", btcRate);
+
+      }).error(function() {
+        // If no connection can be made to server, give an error message
+        // Display the error
+        document.getElementById("conversionResult").innerHTML = "There was an error getting the conversion rate.";
+        // Re-enable the convert button
+    })
+  }
+  </script>
+
+  <script>
+  // To convert a USD or Euro value into NXT, BTC too
+  function convertFiatToNXT() {
+    // Get the value to convert
+    var value_to_convert = $('#value_to_convert').val();
+    // Clear any prior error messages
+    document.getElementById("value_to_convertErrorMessage").innerHTML = "";
+    document.getElementById("value_to_convertErrorMessage2").innerHTML = "";
+    // Clear previous conversion results
+    document.getElementById("conversionResult").innerHTML = "";
+    // Get the currency to convert to
+    var currency = $("input[name=currencyChoice]:checked").val();
+
+    // Disable the button while conversion is under way and display Converting... text
+    var convertingText = $.t("button_processing");
+    document.getElementById("conversionButtonSection").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-default\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + convertingText + "</button>";
+
+    // Get the user's selected currency and perform the conversion and set the currency symbol
+    if (currency == 'usd') {
+      var currencyPair = "nxt_btc";
+      var currencySymbol = "$";
+    } else if (currency == 'euro') {
+      var currencyPair = "nxt_eur";
+      var currencySymbol = "€";
+    } else {
+      var currencyPair = "nxt_btc";
+      var currencySymbol = "BTC ";
+    }
+    var conversionURL = "http://api.cryptocoincharts.info/tradingPair/" + currencyPair;
+
+    // Request up to date conversion rate info from CryptoCoin Charts
+    $.getJSON(conversionURL,
+
+      function(result) {
+        // Set the conversion rates
+        var conversionRate = result.price;
+        if (currency == 'usd') { // Handle USD conversion differently
+          // Get the btcRate out of local storage
+          var btcRate = sessionStorage.getItem("btcRate");
+          // And multiply the NXT/BTC rate by this number
+          conversionRate = conversionRate * btcRate;
+        }
+
+        var convertedValue = value_to_convert * conversionRate;
+
+        // Round the result for nice display
+        if (currency == 'btc') {
+          var roundedConvertedValue = convertedValue;
+        } else {
+          var roundedConvertedValue = ((convertedValue * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(2)
+        }
+
+        // Re-enable the convert button
+        document.getElementById("conversionButtonSection").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-success\" onclick=\"convertFiatToNXT();\"><div id=\"convertButtonText\"></div></button>";
+        setButtonText();
+
+        // Display the result
+        var translatedPostConversionText = $.t("converted_value");
+        document.getElementById("conversionResult").innerHTML = translatedPostConversionText + " <b>" + currencySymbol + roundedConvertedValue + "</b>.";
+
+      }).error(function() {
+        // If no connection can be made to server, give an error message
+        // Display the error
+        document.getElementById("conversionResult").innerHTML = "There was an error getting the conversion rate.";
+        // Re-enable the convert button
+        document.getElementById("conversionButtonSection").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-success\" onclick=\"convertFiatToNXT();\"><div id=\"convertButtonText\"></div></button>";
+        setButtonText();
+      }
+    );
+
+  };
+  </script>
+
+
+  <script>
+  // To convert a USD or Euro value into NXT, also BTC
+  function convertNXTtoFiat() {
+    // Get the value to convert
+    var value_to_convert = $('#value_to_convert2').val();
+    // Clear any prior error messages
+    document.getElementById("value_to_convertErrorMessage").innerHTML = "";
+    document.getElementById("value_to_convertErrorMessage2").innerHTML = "";
+    // Clear previous conversion results
+    document.getElementById("conversionResult2").innerHTML = "";
+    // Get the currency to convert to
+    var currency = $("input[name=currencyChoice2]:checked").val();
+
+    // Disable the button while conversion is under way and display Converting... text
+    var convertingText = $.t("button_processing");
+    document.getElementById("conversionButtonSection2").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-default\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + convertingText + "</button>";
+
+    // Get the user's selected currency and perform the conversion and set the currency symbol
+    if (currency == 'usd') {
+      var currencyPair = "nxt_btc";
+      var currencySymbol = "$";
+    } else if (currency == 'euro') {
+      var currencyPair = "nxt_eur";
+      var currencySymbol = "€";
+    } else {
+      var currencyPair = "nxt_btc";
+      var currencySymbol = "BTC ";
+    }
+    var conversionURL = "http://api.cryptocoincharts.info/tradingPair/" + currencyPair;
+
+    // Request up to date conversion rate infro from NXTblocks
+    $.getJSON(conversionURL,
+
+      function(result) {
+        // Set the conversion rates
+        var conversionRate = result.price;
+        if (currency == 'usd') { // Handle USD conversion differently
+          // Get the btcRate out of local storage
+          var btcRate = sessionStorage.getItem("btcRate");
+          // And multiply the NXT/BTC rate by this number
+          conversionRate = conversionRate * btcRate;
+        }
+
+        var convertedValue = value_to_convert / conversionRate;
+
+        // Round the result for nice display
+        var roundedConvertedValue = ((convertedValue * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(2)
+
+        // Re-enable the convert button
+        document.getElementById("conversionButtonSection2").innerHTML = "<button type=\"button\" id=\"convertButton2\" class=\"btn btn-success\" onclick=\"convertNXTtoFiat();\"><div id=\"convertButtonText2\"></div></button>";
+        setButtonText();
+
+        // Display the result
+        var translatedPostConversionText = $.t("converted_value");
+        document.getElementById("conversionResult2").innerHTML = translatedPostConversionText + " <b>NXT " + roundedConvertedValue + "</b>.";
+
+      }).error(function() {
+        // If no connection can be made to server, give an error message
+        // Display the error
+        document.getElementById("conversionResult2").innerHTML = "There was an error getting the conversion rate.";
+        // Re-enable the convert button
+        document.getElementById("conversionButtonSection2").innerHTML = "<button type=\"button\" id=\"convertButton2\" class=\"btn btn-success\" onclick=\"convertNXTtoFiat();\"><div id=\"convertButtonText2\"></div></button>";
+        setButtonText();
+      }
+    );
+
+  };
+  </script>
+
+
+</head>
+
+<body class="full-width" onload="setLanguage(); setLanguageQueryStrings(); setButtonText(); setAccountNumber(); getBTCRate();">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-md-6">
+            <section class="panel">
+              <header class="panel-heading">
+                <b><span data-i18n="from_nxt">From NXT</span></b>
+              </header>
+              <div class="panel-body">
+
+                <p><span data-i18n="select_target_currency">Select your target currency.</span></p>
+
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice" id="optionsUSD" value="usd" checked>
+                    <span data-i18n="us_dollar">US Dollar</span>
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice" id="optionsEuro" value="euro">
+                    <span data-i18n="euro">Euro</span>
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice" id="optionsBTC" value="btc"> Bitcoin
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="value_to_convert"><span data-i18n="value_to_convert">Value to Convert</span></label>
+                  <div class="input-group m-bot15">
+                    <span class="input-group-addon">NXT</span>
+                    <input type="text" pattern="[0-9.]+" onblur="testFieldPrice(this);" class="form-control" data-i18n="[placeholder]placeholder_required" id="value_to_convert">
+                  </div>
+                  <div id="value_to_convertErrorMessage"></div>
+                </div>
+
+                <div id="conversionButtonSection">
+                  <button type="button" id="convertButton" class="btn btn-success" onclick="convertFiatToNXT();">
+                    <div id="convertButtonText"></div>
+                  </button>
+                </div>
+                <br />
+
+                <div id="conversionResult"></div>
+
+                <br />
+                <p><i>Rates provided by CryptoCoinCharts.info (http://www.cryptocoincharts.info)</i></p>
+              </div>
+              <!-- end panel body div -->
+            </section>
+            <!-- end panel section -->
+          </div>
+          <!-- end col-md-6 div -->
+
+          <div class="col-md-6">
+            <section class="panel">
+              <header class="panel-heading">
+                <b><span data-i18n="to_nxt">To NXT</span></b>
+              </header>
+              <div class="panel-body">
+
+                <p><span data-i18n="select_starting_currency">Select your starting currency.</span></p>
+
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice2" id="optionsUSD2" value="usd" onclick="setCurrencySymboltoDollar(this);" checked>
+                    <span data-i18n="us_dollar">US Dollar</span>
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice2" id="optionsEuro2" value="euro" onclick="setCurrencySymboltoEuro(this);">
+                    <span data-i18n="euro">Euro</span>
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice2" id="optionsBTC2" value="btc" onclick="setCurrencySymboltoBTC(this);"> Bitcoin
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="value_to_convert"><span data-i18n="value_to_convert">Value to Convert</span></label>
+                  <div class="input-group m-bot15">
+                    <span class="input-group-addon"><div id="symbol">$</div></span>
+                    <input type="text" pattern="[0-9.]+" onblur="testFieldPrice2(this);" class="form-control" data-i18n="[placeholder]placeholder_required" id="value_to_convert2">
+                  </div>
+                  <div id="value_to_convertErrorMessage2"></div>
+                </div>
+
+                <div id="conversionButtonSection2">
+                  <button type="button" id="convertButton2" class="btn btn-success" onclick="convertNXTtoFiat();">
+                    <div id="convertButtonText2"></div>
+                  </button>
+                </div>
+                <br />
+
+                <div id="conversionResult2"></div>
+
+                <br />
+                <p><i>Rates provided by CryptoCoinCharts.info (http://www.cryptocoincharts.info)</i></p>
+              </div>
+          </div>
+          </section>
+        </div>
+
+        <!-- page end-->
+      </section>
+      </div>
+    </section>
+  </section>
+  <!--main content end-->
+
+  <!-- js placed at the end of the document so the pages load faster -->
+  <script src="js/jquery-1.11.1.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+  <script src="js/bootstrap-hover-dropdown.min.js"></script>
+  <script src="js/respond.min.js"></script>
+
+  <!--common script for all pages-->
+  <script src="js/freemarket_scripts.js"></script>
+  <script src="js/common-scripts.js"></script>
+  <script src="js/i18next-1.7.4.min.js"></script>
+  <script src="js/freemarket_localization_scripts.js"></script>
+  <script src="js/moment.min.js"></script>
+  <script src="js/pending_sales_notice.js"></script>
+
+</body>
+</html>

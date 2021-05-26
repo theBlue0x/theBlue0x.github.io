@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="Mosaddek">
+  <meta name="keyword" content="FlatLab, Dashboard, Bootstrap, Admin, Template, Theme, Responsive, Fluid, Retina">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x.io Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <script>
+function checkLogin(){ // Remove the Secret Phrase form element if the user is already logged in
+ var loginStatus = sessionStorage.getItem("loginStatus");
+ var listingid=(getQueryVariable("itemid"));
+ if (loginStatus == 'loggedin') {
+  var fmlang = localStorage.getItem("fmlang");
+  window.location.href = 'SearchByItemID_Results_Available.html?setLng=' + fmlang + '&itemid=' + listingid;
+} 
+};		
+</script>  
+
+<script>
+  function backToSearch(){
+   var searchPage = localStorage.getItem("searchpage");
+   var fmlang = localStorage.getItem("fmlang");
+   window.location.href = searchPage + '?setLng=' + fmlang;
+ };
+</script>
+
+
+<script>
+  function updateFinalPrice(val)
+  {
+    var finalPrice=Number(sessionStorage.getItem("originalPrice"));
+    if (val == "none") {
+     val = 0;
+   }
+   var shippingPrice = Number(val);
+   finalPrice += shippingPrice;
+   sessionStorage.setItem("price", finalPrice);
+   // Translate the button text
+   var translatedBuyButtonText = $.t("button_buy_for_nxt");
+   document.getElementById("buyButtonText").innerHTML= translatedBuyButtonText + " " +finalPrice;
+ }
+</script>
+
+<!--buyItem function-->
+<script>
+  function buyItem() {
+   var listingid = (getQueryVariable("itemid"));
+   var message = document.getElementById('message').value;  
+   var itemFinalPriceStored = sessionStorage.getItem("price");
+   var itemFinalPrice = itemFinalPriceStored*100000000;
+   var shippingAddress = document.getElementById('shippingAddress').value;  
+   var secretPhraseCheck = document.getElementById('secretPhrase').value;  
+   
+	// Check to see if shipping options are present; if so, set variables 
+	var element = $('#selectedShipping');
+	if (element.length) {
+		var e = document.getElementById("selectedShipping");
+		var selectedShipping = e.options[e.selectedIndex].value;
+		var selectedShippingText = e.options[e.selectedIndex].text;
+    
+		if (selectedShipping == 'none'){
+			var translatedSelectedShippingErrorMessage = $.t("error_shipping_method");
+			document.getElementById("selectedShippingErrorMessage").innerHTML="<p class=\"validation_message\">" + translatedSelectedShippingErrorMessage + "</p>";
+			return; // Stops the processing of the Buy function until a shipping method is selected.
+		}
+		else {
+     document.getElementById("selectedShippingErrorMessage").innerHTML="";
+   }	
+		}// End of shipping variables check and set
+
+		
+		if (!shippingAddress){
+			var translatedShippingAddressErrorMessage = $.t("error_shipping_address");
+			document.getElementById("shippingAddressErrorMessage").innerHTML="<p class=\"validation_message\">" + translatedShippingAddressErrorMessage + "</p>";
+			return; // Stops the processing of the Buy function until a shipping method is selected.
+		}
+		else {
+     document.getElementById("shippingAddressErrorMessage").innerHTML="";
+   }	
+
+		if (!secretPhraseCheck){
+			var translatedSecretPhraseErrorMessage = $.t("error_secret_phrase");
+			document.getElementById("secretPhraseErrorMessage").innerHTML="<p class=\"validation_message\">" + translatedSecretPhraseErrorMessage + "</p>";
+			return; // Stops the processing of the Buy function until a shipping method is selected.
+		}
+		else {
+     document.getElementById("secretPhraseErrorMessage").innerHTML="";
+   }	
+
+
+   // Disable the button while NxtPass does its work
+   //document.getElementById("buyButton").disabled = true;
+   document.getElementById("buyButtonSection").innerHTML = "<button type=\"button\" id=\"buyButton\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;Processing...</button>";
+
+   $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'buyItem', listing_id: listingid, message: $('#message').val(), finalPrice: itemFinalPrice, shippingMethod: selectedShippingText, shippingAddress: $('#shippingAddress').val(), usersSecretPhrase: $('#secretPhrase').val() },
+    
+    function(result){
+
+      var buy_item_response = result.query_status;
+      if (buy_item_response == 'good') {
+       var itemid = (getQueryVariable("itemid"));
+       var translatedSuccess = $.t("success");
+       var translatedSuccessPurchasePart1 = $.t("success_purchase_part1");
+       var translatedSuccessPurchasePart2 = $.t("success_purchase_part2");
+       document.getElementById("backToSearchButton").innerHTML = translatedSuccess;
+       document.getElementById("successMessage").innerHTML = translatedSuccessPurchasePart1 + itemid + translatedSuccessPurchasePart2 + ".";  	   		
+     }
+     else {
+	   // Display failure message
+       var translatedFailure = $.t("purchase_failure");
+       document.getElementById("successMessage").innerHTML = translatedFailure;  		
+     }
+    }, "json"); // Specifies JSON as the expected result
+};
+</script> 
+<!--End buyItem function-->
+
+
+<!--Start searchByItemID function-->
+<script>
+  function searchByItemID(){
+    var listingid=(getQueryVariable("itemid"));
+    
+    $.post( "http://127.0.0.1:17776/nxtpass", { requestType:'searchSingleItem', listing_id: listingid },
+      
+      function(result){
+        
+    if (result.query_status == "bad")// If no results are returned
+    {// Open if statement
+      
+      document.getElementById("no_listing_message").innerHTML="No listing found";
+      
+    }// Close if statement
+    else {// Open else statement
+      
+      var displayPrice = result.price/100000000;
+      sessionStorage.setItem("originalPrice", displayPrice);
+      sessionStorage.setItem("price", displayPrice);
+	  // Translate the button text
+	  var translatedBuyButtonText = $.t("button_buy_for_nxt");
+      document.getElementById("buyButtonText").innerHTML = translatedBuyButtonText + " " + displayPrice;
+      
+      
+		// Clean the title
+		var cleanTitle = escapeHtml(result.item_title);
+		document.getElementById("title").innerHTML= cleanTitle;
+
+		// Clean the description
+		var cleanDescription = escapeHtml(result.item_description);
+		document.getElementById("description").innerHTML= cleanDescription;
+
+		// Clean the category
+		var cleanCategory = escapeHtml(result.category1);
+		document.getElementById("category").innerHTML= cleanCategory;	
+   
+		// Create Seller ID link
+		var cleanSellerID = escapeHtml(result.seller_id);
+		document.getElementById("seller_id").innerHTML= "<a href='SearchBySellerID_single.html?sellerid=" + cleanSellerID + "' style='float: none;margin-right: 0px;margin-left: 0px;color:white;border: 0;display: inline;text-decoration: underline'>" + cleanSellerID + 
+		"</a>";
+
+		// Clean the following fields
+		document.getElementById("itemID").innerHTML= escapeHtml(result.listing_id);
+		document.getElementById("price").innerHTML= displayPrice.toFixed(8);
+
+		// Clean and translate the status
+   var untranslated = escapeHtml(result.item_status);
+   var translated = "";
+   if (untranslated == "Available"){
+    translated = $.t("available");
+  }
+  else if (untranslated == "Sold"){
+    translated = $.t("sold");
+  }
+  else if (untranslated == "Canceled"){
+    translated = $.t("canceled");
+  }
+  else if (untranslated == "Pending"){
+    translated = $.t("pending");
+  }
+  else {
+    translated = "Unknown";
+  }	                    
+  
+  document.getElementById("status").innerHTML = translated;
+
+		// Clean the main image URL
+		var main_image_url = escapeHtml(result.main_image_url);
+		
+		if (main_image_url){
+      document.getElementById("top_image").innerHTML="<img alt=\"\" src=\""+ main_image_url + "\">";
+    }		
+    var nxtDate	= result.start_timestamp;
+    var unixEpoch = moment("Thu, 01 Jan 1970 00:00:00 GMT");
+    var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+    var convertedListedTimeMoment = moment(nxtEpoch).add('seconds', nxtDate);
+    var convertedListedTime = moment(convertedListedTimeMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+    
+    var nxtDateExpire = result.end_timestamp;
+    var convertedExpirationMoment = moment(nxtEpoch).add('seconds', nxtDateExpire);
+    var convertedExpiration = moment(convertedExpirationMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+
+		// Clean the tags
+    var displayTags = '';
+    if (result.item_tag1){
+     displayTags += escapeHtml(result.item_tag1);
+   }
+   if (result.item_tag2){
+     displayTags += ', ' + escapeHtml(result.item_tag2);
+   }
+   if (result.item_tag3){
+     displayTags += ', ' + escapeHtml(result.item_tag3);
+   }
+   
+   document.getElementById("expiration").innerHTML= convertedExpiration;
+   
+   document.getElementById("tags").innerHTML= displayTags;
+   
+		// Clean additional image URLs
+		var additional_image_1_URL = escapeHtml(result.additional_image_1_URL);
+		//var additional_image_1_URL = additional_image_1_URL.replace(regex, "");
+
+		var additional_image_2_URL = escapeHtml(result.additional_image_2_URL);
+		//var additional_image_2_URL = additional_image_2_URL.replace(regex, "");
+
+		var additional_image_3_URL = escapeHtml(result.additional_image_3_URL);
+		//var additional_image_3_URL = additional_image_3_URL.replace(regex, "");
+		
+		if (additional_image_1_URL){
+      var additional_images_section = '<div id="polaroid">';
+      additional_images_section += '<figure>';	
+      additional_images_section += '<img src="' + additional_image_1_URL + '" width="200" height="200" alt="Image 1" />';	
+      additional_images_section += '</figure>';	
+    }
+    
+    if (additional_image_2_URL){
+     if (!additional_image_1_URL){
+      var additional_images_section = '<div id="polaroid">';
+    }
+    additional_images_section += '<figure>';	
+    additional_images_section += '<img src="' + additional_image_2_URL + '" width="200" height="200" alt="Image 2" />';	
+    additional_images_section += '</figure>';	
+  }
+  
+  if (additional_image_3_URL){
+   if (!additional_image_1_URL && !additional_image_2_URL){
+    var additional_images_section = '<div id="polaroid">';
+  }
+  additional_images_section += '<figure>';	
+  additional_images_section += '<img src="' + additional_image_3_URL + '" width="200" height="200" alt="Image 3" />';	
+  additional_images_section += '</figure>';	
+}
+
+if (additional_images_section){
+  additional_images_section += '</div><br />';	
+  document.getElementById("extra_images_section").innerHTML=additional_images_section;
+}
+
+		// Clean the shipping fields
+		var shippingMethod1 = escapeHtml(result.shippingMethod1);
+		var shippingCost1 = escapeHtml(result.shippingCost1);
+		var shippingMethod2 = escapeHtml(result.shippingMethod2);
+		var shippingCost2 = escapeHtml(result.shippingCost2);
+		var shippingMethod3 = escapeHtml(result.shippingMethod3);
+		var shippingCost3 = escapeHtml(result.shippingCost3);
+		
+		if (shippingMethod1){
+      var shipping_options_section = '<div class="form-group"><label>Shipping Options</label><select class="form-control m-bot15" onchange="updateFinalPrice(this.value)" id="selectedShipping">';
+      var translatedSelectShippingMethod = $.t("select_shipping");
+      shipping_options_section += '<option value="none">' + translatedSelectShippingMethod + '</option>';
+      shipping_options_section += '<option value="' + shippingCost1 + '">' + shippingMethod1 + ' (NXT ' + shippingCost1 + ')</option>';	
+    }
+    
+    if (shippingMethod2){
+     if (!shippingMethod1){
+      var shipping_options_section = '<div class="form-group"><label>Shipping Options</label><select class="form-control m-bot15">';
+      var translatedSelectShippingMethod = $.t("select_shipping");
+      shipping_options_section += '<option>' + translatedSelectShippingMethod + '</option>';
+
+    }
+    shipping_options_section += '<option value="' + shippingCost2 + '">' + shippingMethod2 + ' (NXT ' + shippingCost2 + ')</option>';	
+  }
+
+  if (shippingMethod3){
+   if (!shippingMethod1 && !shippingMethod2){
+    var shipping_options_section = '<div class="form-group"><label>Shipping Options</label><select class="form-control m-bot15">';
+    var translatedSelectShippingMethod = $.t("select_shipping");
+    shipping_options_section += '<option>' + translatedSelectShippingMethod + '</option>';
+
+  }
+  shipping_options_section += '<option value="' + shippingCost3 + '">' + shippingMethod3 + ' (NXT ' + shippingCost3 + ')</option>';	
+}
+
+if (shipping_options_section){
+  shipping_options_section += '</select></div>';	
+  shipping_options_section += '<div id="selectedShippingErrorMessage"></div>';	
+  document.getElementById("shipping_options_section").innerHTML=shipping_options_section;
+}
+
+}
+    }, "json"); // Specifies JSON as the expected result
+};
+</script>
+<!--End searchByItemID function-->
+
+</head>
+<body class="full-width" onload="setAccountNumber(); checkLogin(); searchByItemID(); setLanguage(); setLanguageQueryStrings();">
+
+  <section id="container" class="">
+    <!--header start-->
+    <header class="header white-bg">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="fa fa-ellipsis-v"></span>
+        </button>
+
+        <!--logo start-->
+        <a id="logo_link" href="index.html?setLng=en" class="logo" >Free<span>Market</span></a>
+        <!--logo end-->
+        <div class="horizontal-menu navbar-collapse collapse ">
+          <ul class="nav navbar-nav">
+            <li><a id="home_link" href="index.html?setLng=en"><span data-i18n="menu_home">Home</span></a></li>
+            <li class="dropdown">
+              <a data-toggle="dropdown" data-hover="dropdown" class="dropdown-toggle" href="#"><span data-i18n="menu_buy">Buy</span> <b class=" fa fa-angle-down"></b></a>
+              <ul class="dropdown-menu">
+                <li><a id="view_all_link" href="ViewAll.html?setLng=en"><span data-i18n="menu_view_all">View All Items</span></a></li>
+                <li><a id="search_title_link" href="SearchByTitle.html?setLng=en"><span data-i18n="menu_search_title">Search by Title</span></a></li>
+                <li><a id="search_category_link" href="SearchByCategory.html?setLng=en"><span data-i18n="menu_search_category">Search by Category</span></a></li>
+                <li><a id="search_tag_link" href="SearchByTag.html?setLng=en"><span data-i18n="menu_search_tag">Search by Tag</span></a></li>
+                <li><a id="search_seller_link" href="SearchBySellerID.html?setLng=en"><span data-i18n="menu_search_seller">Search by Seller ID</span></a></li>
+                <li><a id="search_item_link" href="SearchByItemID.html?setLng=en"><span data-i18n="menu_search_item">Search by Item ID</span></a></li>
+                <li><a id="view_purchases_link" href="ViewYourPurchases.html?setLng=en"><span data-i18n="menu_view_purchases">View Your Purchases</span></a></li>
+              </ul>
+            </li>
+            <li class="dropdown">
+              <a data-toggle="dropdown" data-hover="dropdown" class="dropdown-toggle" href="#"><span data-i18n="menu_sell">Sell</span> <b class=" fa fa-angle-down"></b></a>
+              <ul class="dropdown-menu">
+                <li><a id="new_item_link" href="ListNewItem.html?setLng=en"><span data-i18n="menu_list_new">List New Item</span></a></li>
+                <li><a id="view_items_link" href="ViewYourItems.html?setLng=en"><span data-i18n="menu_view_items">View Your Items</span></a></li>
+              </ul>
+            </li>
+          </ul>
+
+        </div>
+        <div class="top-nav ">
+          <ul class="nav pull-right top-menu">
+            <li>
+              
+            </li>
+            <!-- user login dropdown start-->
+            <li class="dropdown">
+              <a data-toggle="dropdown" class="dropdown-toggle" href="#">
+                <span class="username" id="username"><span data-i18n="menu_login_button">Log In</span></span>
+              </a>
+              <ul class="dropdown-menu extended logout">
+                <div class="log-arrow-up"></div>
+                <li><a href="#"><i class=" fa fa-info-circle"></i><div id="accountBalance"><span data-i18n="menu_login_text">Log in to store your secret phrase.</span></div></a></li>
+                <li><a id="login_link" href="login.html?setLng=en"><i class="fa fa-key"></i><div id="logintext"><span data-i18n="menu_login">Log In</span></div></a></li>
+              </ul>
+            </li>
+            <!-- user login dropdown end -->
+          </ul>
+        </div>
+
+      </div>
+
+    </header>
+    <!--header end-->
+    <!--sidebar start-->
+
+    <!--sidebar end-->
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                
+                <div id="backToSearchButton">
+                  <button type="button" class="btn btn-default" onclick="backToSearch()"><i class="fa fa-arrow-left"></i><span data-i18n="button_back_to_search">Back to Search</span></button></div>
+
+                </header>                          
+                <div class="panel-body">
+                 <div id="successMessage"> <!--Start of successMessage div-->
+                  <!--item widget start-->
+
+                  <aside class="profile-nav alt green-border">
+                    <section class="panel">
+                      <div class="user-heading alt green-bg">
+                        <a href="#">
+                          <span id="top_image"><img alt="" src="img/Box-icon.png"></span>
+                        </a>
+                        <h1 id="title">No Item Title</h1>
+                        <p><span data-i18n="item_id">Item ID</span>: <span id="itemID"></span></p>
+                        <p><span data-i18n="seller_id">Seller ID</span>: <span id="seller_id"></span></p>
+                        <p><span data-i18n="status">Status</span>: <span id="status"></span></p>
+                        <br />
+                        <hr>
+                        <p><i class="fa fa-tasks"></i> <span data-i18n="category">Category</span>: <span id="category"></span></a></p>
+                        <p><i class="fa fa-tags"></i> <span data-i18n="tags">Tags</span>: <span id="tags"></span></a></p>
+                        <p><i class="fa fa-clock-o"></i> <span data-i18n="expiration">Expires</span>: <span id="expiration"></span></a></p>
+                        <p><i class="fa fa-money"></i> <span data-i18n="price_with_nxt">Price: NXT </span><span id="price"></span></a></p>
+                        <hr>
+                        <p><span data-i18n="description">Description</span><br /><span id="description"></span></p>
+                      </div>
+
+
+                    </section>
+                  </aside>
+                  <!--item widget end-->
+
+                  <!--additional images section start-->
+                  <div id="extra_images_section"></div>
+                  <!--additional images section end-->
+
+                  <!--shipping section start-->
+                  <div id="shipping_options_section"></div>
+                  <!--shippingsection end-->
+
+                  <div id="shippingAddressSection">	
+                    <div class="form-group">
+                      <label for="shippingAddress"><span data-i18n="shipping_address">Shipping Address</span></label>
+                      <textarea class="form-control" maxlength="100" cols="60" rows="5" id="shippingAddress" data-i18n="[placeholder]shipping_address_required"></textarea>
+                      <div id="shippingAddressErrorMessage"></div>
+                    </div>
+                  </div> <!--End of shippingAddressSection div-->
+                  
+                  <div id="messageSection">	
+                    <div class="form-group">
+                      <label for="message"><span data-i18n="message_to_seller">Message to Seller</span></label>
+                      <div class="iconic-input">
+                        <i class="fa fa-bullhorn"></i>
+                        <input type="text" class="form-control" maxlength="100" data-i18n="[placeholder]message_to_seller" id="message">
+                      </div>
+                    </div>
+                  </div> <!--End of messageSection div-->
+                  
+                  <hr>
+                  <div class="form-group">
+                    <label for="secretPhrase"><span data-i18n="secret_phrase">Secret Phrase</span></label>
+                    <div class="iconic-input">
+                      <i class="fa fa-key"></i>
+                      <input type="password" class="form-control" id="secretPhrase" data-i18n="[placeholder]placeholder_required">
+                      <div id="secretPhraseErrorMessage"></div>
+                    </div>
+                  </div>	                              
+
+                  <div id="buyButtonSection">		
+                    <button type="button" id="buyButton" class="btn btn-success" onclick="buyItem();"><div id="buyButtonText"></div></button>
+                  </div> <!--End of buyButtonSection div-->
+                  
+                </div> <!--End of successMessage div-->
+              </section>
+            </div>                      
+          </section>
+        </div>
+        
+        
+        <!-- page end-->
+      </section>
+    </div>
+  </section>
+</section>
+<!--main content end-->
+
+<!-- js placed at the end of the document so the pages load faster -->
+<script src="js/jquery-1.11.1.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+<script src="js/bootstrap-hover-dropdown.min.js"></script>
+<script src="js/respond.min.js" ></script>
+<script src="js/moment.min.js"></script>
+
+<!--common script for all pages-->
+<script src="js/freemarket_scripts.js"></script>
+<script src="js/common-scripts.js"></script>
+<script src="js/i18next-1.7.4.min.js"></script>
+<script src="js/freemarket_localization_scripts.js"></script>
+
+</body>
+</html>

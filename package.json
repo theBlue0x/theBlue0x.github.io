@@ -1,0 +1,50 @@
+{
+    "title": "Blue0x",
+    "name": "Blue0x Website",
+    "version": "5.0.8",
+    "scripts": {
+        "start": "node_modules/.bin/gulp watch"
+    },
+    "description": "Website",
+    "keywords": [
+        "css",
+        "sass",
+        "html",
+        "responsive",
+        "theme",
+        "template"
+    ],
+    "homepage": "https://www.blue0x.io",
+    "bugs": {
+        "url": "",
+        "email": ""
+    },
+    "license": "MIT",
+    "author": "Start Bootstrap",
+    "contributors": [
+        "David Miller (http://davidmiller.io/)"
+    ],
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-free": "5.12.1",
+        "bootstrap": "4.4.1",
+        "jquery": ">=3.5.0",
+        "jquery.easing": "^1.4.1"
+    },
+    "devDependencies": {
+        "browser-sync": "2.26.7",
+        "del": "5.1.0",
+        "gulp": "4.0.2",
+        "gulp-autoprefixer": "7.0.1",
+        "gulp-clean-css": "4.3.0",
+        "gulp-header": "2.0.9",
+        "gulp-plumber": "^1.2.1",
+        "gulp-rename": "2.0.0",
+        "gulp-sass": "4.0.2",
+        "gulp-uglify": "3.0.2",
+        "merge-stream": "2.0.0"
+    }
+}

@@ -2,7 +2,7 @@
 
 [Check it out!](https://theblue0x.github.io/)
 
-![Image description](https://i.imgur.com/keWgppA.png)
+![Image description](https://i.imgur.com/6gumxKO.png)
 
 
 

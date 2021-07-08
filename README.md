@@ -3,7 +3,7 @@
 ***"We Are The Bank. Together."***
 
 
-[Check it out!](https://theblue0x.github.io/)
+[Blue0x.io](https://theblue0x.github.io/)
 
 ![Image description](https://i.imgur.com/ejbMQKO.png)
 

@@ -1,6 +1,6 @@
 # Blue0x.io Web Repo -- ***Under Development*** --
 
-***"We Are The Bank. Together."***
+***"Together. We Are The Bank."***
 
 
 [Blue0x.io](https://theblue0x.github.io/)

@@ -33,17 +33,38 @@
           <img src="../img/logo.png" class="img-fluid" alt="Blue0x Logo">
           <h2 class="text-white mx-auto mt-2 mb-5"> Where would you like to go? </h2>
            <div class="dropdown">
-             <button class="dropbtn">Dropdown
-                <i class="fa fa-caret-down"></i>
-             </button>
-             <div class="dropdown-content">
-             <a href="../404.html">Download Wallet</a>
-             <a href="../404.html">Marketplace</a>
-             <a href="../404.html">Currency Exchange</a>    
+             <button onclick="myFunction()" class="dropbtn">Select</button>
+             <div id="myDropdown" class="dropdown-content">
+               <a href="../404.html">Download Wallet</a>
+               <a href="../404.html">Marketplace</a>
+               <a href="../404.html">Currency Exchange</a>    
+             </div>
            </div>
-       </div>
-     </div>
+        </div>
+      </div>
     </header>
+    
+<script>
+/* When the user clicks on the button, 
+toggle between hiding and showing the dropdown content */
+function myFunction() {
+  document.getElementById("myDropdown").classList.toggle("show");
+}
+
+// Close the dropdown if the user clicks outside of it
+window.onclick = function(event) {
+  if (!event.target.matches('.dropbtn')) {
+    var dropdowns = document.getElementsByClassName("dropdown-content");
+    var i;
+    for (i = 0; i < dropdowns.length; i++) {
+      var openDropdown = dropdowns[i];
+      if (openDropdown.classList.contains('show')) {
+        openDropdown.classList.remove('show');
+      }
+    }
+  }
+}
+</script>
 
     <!-- Bootstrap core JavaScript -->
     <script src="../vendor/jquery/jquery.min.js"></script>

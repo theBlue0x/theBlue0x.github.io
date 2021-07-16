@@ -12,7 +12,6 @@
   <!-- Bootstrap core CSS -->
   <link href="css/bootstrap.min.css" rel="stylesheet">
   <link href="css/bootstrap-reset.css" rel="stylesheet">
-  <link href="css/language_select.css" rel="stylesheet">
   <!--external css-->
   <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
 
@@ -25,10 +24,9 @@
   <script src="js/html5shiv.js"></script>
   <script src="js/respond.min.js"></script>
   <![endif]-->
-
 </head>
 
-<body class="full-width" onload="setAccountNumber(); checkInitialLanguage();">
+<body class="full-width" onload="setAccountNumber(); setLanguage();">
 
   <section id="container" class="">
 
@@ -49,32 +47,20 @@
           <div class="col-lg-12">
             <section class="panel">
               <header class="panel-heading">
-                <b><span data-i18n="header_language">Language</span></b>
+                <b><span data-i18n="menu_home">Welcome to the Blue0x Decentralized Marketplace</span></b>
               </header>
               <div class="panel-body">
+                <p class="validation_message"><span data-i18n="alert_1"></span></p>
+                <p><span data-i18n="welcome_text1"></span></p>
+                <p><span data-i18n="welcome_text2"></span></p>
+                <p><span data-i18n="welcome_text3"></span></p>
+                <p><span data-i18n="welcome_text4"></span></p>
+                <p><span data-i18n="welcome_text5"></span></p>
+                <p><span data-i18n="welcome_text6"></span></p>
+                <p><a href="https://blue0x.io">More Info - https://blue0x.io</p>
+                <!--p style="text-align:center;"><img src="img/favicon.png"></p-->
 
-                <p><b><span data-i18n="select_language">Select Your Language</span></b></p>
 
-                <div class="btn-group">
-                  <button class="btn btn-white" type="button"><span data-i18n="language_button">Language</span></button>
-                  <button data-toggle="dropdown" class="btn btn-white dropdown-toggle" type="button"><span class="caret"></span></button>
-                  <ul role="menu" class="dropdown-menu">
-                    <li><a href="index2.html?setLng=en">English</a></li>
-                    <li><a href="index2.html?setLng=zh">中文</a></li>
-                    <li><a href="index2.html?setLng=es">Español</a></li>
-                    <li><a href="index2.html?setLng=it">Italiano</a></li>
-                    <li><a href="index2.html?setLng=de">Deutsch</a></li>
-                    <li><a href="index2.html?setLng=ja">日本語</a></li>
-                    <li><a href="index2.html?setLng=fr">Français</a></li>
-                    <li><a href="index2.html?setLng=he">עברית</a></li>
-                    <li><a href="index2.html?setLng=lt">Lietuviškai</a></li>
-                    <li><a href="index2.html?setLng=el">ελληνικά</a></li>
-                    <li><a href="index2.html?setLng=da">Dansk</a></li>
-                    <li><a href="index2.html?setLng=hr">Hrvatski</a></li>
-                  </ul>
-                </div>
-                <!-- /btn-group -->
-                <hr>
               </div>
             </section>
           </div>
@@ -92,12 +78,14 @@
   <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
   <script src="js/bootstrap-hover-dropdown.min.js"></script>
   <script src="js/respond.min.js"></script>
+  <script src="js/moment.min.js"></script>
 
   <!--common script for all pages-->
   <script src="js/freemarket_scripts.js"></script>
   <script src="js/common-scripts.js"></script>
   <script src="js/i18next-1.7.4.min.js"></script>
   <script src="js/freemarket_localization_scripts.js"></script>
+  <script src="js/pending_sales_notice.js"></script>
 
 </body>
 </html>

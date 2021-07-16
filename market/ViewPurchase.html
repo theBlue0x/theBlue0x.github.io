@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+  <link href="css/spinner.css" rel="stylesheet">
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <script>
+  function backToSearch() {
+    var searchPage = localStorage.getItem("searchpage");
+    var fmlang = localStorage.getItem("fmlang");
+    window.location.href = searchPage + '?setLng=' + fmlang;
+  };
+  </script>
+
+  <script>
+  function itemReceived() {
+    /* !Needs work */
+    // Put in secret phrase field  
+    var secretPhrase = parent.passphrase;
+    var listingid = (getQueryVariable("itemid"));
+
+    // Disable the button while NxtPass does its work
+    document.getElementById("buttonSection").innerHTML = "<a class=\"btn btn-success\" id=\"receivedButton\" type=\"button\"><span data-i18n=\"button_item_received\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;Processing...</span></a><a class=\"btn btn-danger\" id=\"notReceivedButton\" type=\"button\"><span data-i18n=\"button_item_not_received\">Item Not Received</span></a>";
+
+    $.post(Constants.nxtpassApiUrl, {
+        requestType: 'item_received',
+        listing_id: listingid,
+        messageToSeller: $('#messageToSeller').val(),
+        usersSecretPhrase: secretPhrase
+      },
+      function(result) {
+
+        var item_received_status = result.query_status;
+        if (item_received_status == 'good') {
+
+          document.getElementById("successMessage").innerHTML = "Success: You have marked this item as received and completed the escrow process. The seller will be paid.";
+        } else {
+          // Display failure message  
+          document.getElementById("successMessage").innerHTML = " Result: FAILURE to mark this item as received and complete the escrow process. The seller will not be paid.";
+        }
+      }, "json"); // Specifies JSON as the expected result
+  };
+  </script>
+
+  <script>
+  function itemNotReceived() {
+    /* !Needs work */
+    // Put in secret phrase field  
+    var secretPhrase = parent.passphrase;
+    var listingid = (getQueryVariable("itemid"));
+
+    // Disable the button while NxtPass does its work
+    document.getElementById("buttonSection").innerHTML = "<a class=\"btn btn-success\" id=\"receivedButton\" type=\"button\"><span data-i18n=\"button_item_received\">Item Received</span></a><a class=\"btn btn-danger\" id=\"notReceivedButton\" type=\"button\"><span data-i18n=\"button_item_not_received\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;Processing...</span></a>";
+
+    $.post(Constants.nxtpassApiUrl, {
+        requestType: 'item_not_received',
+        listing_id: listingid,
+        messageToSeller: $('#messageToSeller').val(),
+        usersSecretPhrase: secretPhrase
+      },
+      function(result) {
+
+        var item_not_received_status = result.query_status;
+        if (item_not_received_status == 'good') {
+
+          document.getElementById("successMessage").innerHTML = "Success: You have marked this item as not received. Your escrow provider will be informed.";
+        } else {
+          // Display failure message  
+          document.getElementById("successMessage").innerHTML = " Result: FAILURE to mark this item as not received.";
+        }
+      }, "json"); // Specifies JSON as the expected result
+  };
+  </script>
+
+  <script>
+  function searchByItemID() {
+    var listingid = (getQueryVariable("itemid"));
+    var loggedInAccount = sessionStorage.getItem("RSaccountNumber");
+
+    $.post(Constants.nxtpassApiUrl, {
+        requestType: 'getItemPublic',
+        listing_id: listingid
+      },
+
+      function(result) {
+
+        if (result.query_status == "bad")
+        {
+          document.getElementById("successMessage").innerHTML = "No listing found";
+        }
+        else {
+
+          // Set the currency for display in description block at top of page
+          var displayCurrency = 'BLX';
+          var displayPrice = result.price / 100000000; // Set the right decimal for NXT
+          sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+          if (result.currency == Constants.coinoUsdAssetName) {
+            displayCurrency = 'CoinoUSD';
+            displayPrice = result.price / 100; // Change the decimal to be right for CoinoUSD
+            sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+          }
+          displayPriceWithCurrency = displayPrice + " " + displayCurrency;
+          document.getElementById("price").innerHTML = displayPriceWithCurrency;
+
+          // Clean the listing ID
+          document.getElementById("itemID").innerHTML = escapeHtml(result.listing_id);
+
+          // Clean the title
+          var cleanTitle = escapeHtml(result.item_title);
+          document.getElementById("title").innerHTML = cleanTitle;
+
+          // Clean the description
+          var cleanDescription = escapeHtml(result.item_description);
+          document.getElementById("description").innerHTML = cleanDescription;
+
+          // Clean the category
+          var cleanCategory = escapeHtml(result.category1);
+          document.getElementById("category").innerHTML = cleanCategory;
+
+          // Create Seller ID link
+          var fmlang = localStorage.getItem("fmlang");
+          var cleanSellerID = escapeHtml(result.seller_id);
+          document.getElementById("seller_id").innerHTML = "<a href='SearchBySellerID.html?setLang=" + fmlang + "&sellerid=" + cleanSellerID + "' style='float: none;margin-right: 0px;margin-left: 0px;color:white;border: 0;display: inline;text-decoration: underline'>" + cleanSellerID +
+            "</a>";
+
+          // Check for image URLs
+          if (result.main_image_url != "") {
+            main_image_url = "Yes";
+          }
+          if (result.additional_image_1_URL != "") {
+            additional_image_1_URL = "Yes";
+          }
+          if (result.additional_image_2_URL != "") {
+            additional_image_2_URL = "Yes";
+          }
+          if (result.additional_image_3_URL != "") {
+            additional_image_3_URL = "Yes";
+          }
+
+          if (main_image_url) {
+            // If there is a main_image_url, check it
+            // Clean the main image URL using validator.min.js
+            if (validator.isURL(result.main_image_url)) {
+              // Field is a URL
+              // Now check to make sure the URL is for an image
+              var Extension = result.main_image_url.substring(result.main_image_url.lastIndexOf('.') + 1).toLowerCase();
+              if (Extension == "gif" || Extension == "png" || Extension == "jpeg" || Extension == "jpg") {
+                // Valid image extension
+                var main_image_url = escapeHtml(result.main_image_url);
+                console.log("Note: main_image_url is an image file of type " + Extension + ".");
+              } else {
+                // URL is not for an image file
+                console.log("Warning: main_image_url is not an image file.");
+                var main_image_url = "img/Box-icon.png";
+              }
+            } else {
+              // Field is not a valid URL
+              console.log("Warning: main_image_url is not a valid URL.");
+              var main_image_url = "img/Box-icon.png";
+            }
+            // Add the image to the page
+            document.getElementById("top_image").innerHTML = '<a id="previewMainImageLink" class="fancybox" rel="group" href="' + main_image_url + '"><img alt="" src="' + main_image_url + '"></a>';
+
+          } // End of if (main_image_url)
+
+          var nxtDate = result.start_timestamp;
+          var unixEpoch = moment("1970-01-01T00:00:00.0Z");
+          var nxtEpoch = moment(unixEpoch).add('seconds', 1385294400);
+          var convertedListedTimeMoment = moment(nxtEpoch).add('seconds', nxtDate);
+          var convertedListedTime = moment(convertedListedTimeMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+
+          var nxtDate = result.end_timestamp;
+          var convertedEndTimeMoment = moment(nxtEpoch).add('seconds', nxtDate);
+          var convertedEndTime = moment(convertedEndTimeMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+          document.getElementById("expiration").innerHTML = convertedEndTime;
+
+          // Clean the tags
+          var displayTags = '';
+          if (result.item_tag1) {
+            displayTags += escapeHtml(result.item_tag1);
+          }
+          if (result.item_tag2) {
+            displayTags += ', ' + escapeHtml(result.item_tag2);
+          }
+          if (result.item_tag3) {
+            displayTags += ', ' + escapeHtml(result.item_tag3);
+          }
+
+          document.getElementById("tags").innerHTML = displayTags;
+
+          var additional_images_section = '<div id="polaroid">';
+
+          if (additional_image_1_URL) {
+            // If there is an additional_image_1_URL, check it
+            // Clean additional_image_1_URL using validator.min.js
+            if (validator.isURL(result.additional_image_1_URL)) {
+              // Field is a URL
+              // Now check to make sure the URL is for an image
+              var Extension = result.additional_image_1_URL.substring(result.additional_image_1_URL.lastIndexOf('.') + 1).toLowerCase();
+              if (Extension == "gif" || Extension == "png" || Extension == "jpeg" || Extension == "jpg") {
+                // Valid image extension, so we can use this 
+                var additional_image_1_URL = escapeHtml(result.additional_image_1_URL);
+                console.log("Note: additional_image_1_URL is an image file of type " + Extension + ".");
+                // Add the additional image to the page
+                additional_images_section = '<div id="polaroid">';
+                additional_images_section += '<figure>';
+                additional_images_section += '<a id="previewImage1Link" class="fancybox" rel="group" href="' + additional_image_1_URL + '"><img src="' + additional_image_1_URL + '" width="200" height="200" alt="Image 1" /></a>';
+                additional_images_section += '</figure>';
+              } else {
+                // URL is not for an image file
+                console.log("Warning: additional_image_1_URL is not an image file.");
+                var additional_image_1_URL = "img/Box-icon.png";
+              }
+            } else {
+              // Field is not a valid URL
+              console.log("Warning: additional_image_1_URL is not a valid URL.");
+              var additional_image_1_URL = "img/Box-icon.png";
+              additional_images_section = '<div id="polaroid">';
+              additional_images_section += '<figure>';
+              additional_images_section += '<a id="previewImage1Link" class="fancybox" rel="group" href="' + additional_image_1_URL + '"><img src="' + additional_image_1_URL + '" width="200" height="200" alt="Image 1" /></a>';
+              additional_images_section += '</figure>';
+            }
+          } // End of if (additional_image_1_URL)
+
+          if (additional_image_2_URL) {
+            if (!additional_image_1_URL) {
+              additional_images_section = '<div id="polaroid">';
+            }
+
+            // Clean additional_image_2_URL using validator.min.js
+            if (validator.isURL(result.additional_image_2_URL)) {
+              // Field is a URL
+              // Now check to make sure the URL is for an image
+              var Extension = result.additional_image_2_URL.substring(result.additional_image_2_URL.lastIndexOf('.') + 1).toLowerCase();
+              if (Extension == "gif" || Extension == "png" || Extension == "jpeg" || Extension == "jpg") {
+                // Valid image extension
+                var additional_image_2_URL = escapeHtml(result.additional_image_2_URL);
+                console.log("Note: additional_image_2_URL is an image file of type " + Extension + ".");
+                // Add the additional image to the page
+                additional_images_section += '<figure>';
+                additional_images_section += '<a id="previewImage2Link" class="fancybox" rel="group" href="' + additional_image_2_URL + '"><img src="' + additional_image_2_URL + '" width="200" height="200" alt="Image 2" /></a>';
+                additional_images_section += '</figure>';
+              } else {
+                // URL is not for an image file
+                console.log("Warning: additional_image_2_URL is not an image file.");
+                var additional_image_2_URL = "img/Box-icon.png";
+              }
+            } else {
+              // Field is not a valid URL
+              console.log("Warning: additional_image_2_URL is not a valid URL.");
+              var additional_image_2_URL = "img/Box-icon.png";
+              additional_images_section += '<figure>';
+              additional_images_section += '<a id="previewImage2Link" class="fancybox" rel="group" href="' + additional_image_2_URL + '"><img src="' + additional_image_2_URL + '" width="200" height="200" alt="Image 2" /></a>';
+              additional_images_section += '</figure>';
+            }
+          } // End of if (additional_image_2_URL)
+
+          if (additional_image_3_URL) {
+            if (!additional_image_1_URL && !additional_image_2_URL) {
+              additional_images_section = '<div id="polaroid">';
+            }
+
+            // Clean additional_image_3_URL using validator.min.js
+            if (validator.isURL(result.additional_image_3_URL)) {
+              // Field is a URL
+              // Now check to make sure the URL is for an image
+              var Extension = result.additional_image_3_URL.substring(result.additional_image_3_URL.lastIndexOf('.') + 1).toLowerCase();
+              if (Extension == "gif" || Extension == "png" || Extension == "jpeg" || Extension == "jpg") {
+                // Valid image extension
+                var additional_image_3_URL = escapeHtml(result.additional_image_3_URL);
+                console.log("Note: additional_image_3_URL is an image file of type " + Extension + ".");
+                // Add the additional image to the page
+                additional_images_section += '<figure>';
+                additional_images_section += '<a id="previewImage3Link" class="fancybox" rel="group" href="' + additional_image_3_URL + '"><img src="' + additional_image_3_URL + '" width="200" height="200" alt="Image 3" /></a>';
+                additional_images_section += '</figure>';
+              } else {
+                // URL is not for an image file
+                console.log("Warning: additional_image_3_URL is not an image file.");
+                var additional_image_3_URL = "img/Box-icon.png";
+              }
+            } else {
+              // Field is not a valid URL
+              console.log("Warning: additional_image_3_URL is not a valid URL.");
+              var additional_image_3_URL = "img/Box-icon.png";
+              additional_images_section += '<figure>';
+              additional_images_section += '<a id="previewImage3Link" class="fancybox" rel="group" href="' + additional_image_3_URL + '"><img src="' + additional_image_3_URL + '" width="200" height="200" alt="Image 3" /></a>';
+              additional_images_section += '</figure>';
+            }
+          } // End of if (additional_image_3_URL)
+
+          if (additional_images_section) {
+            additional_images_section += '</div><br />';
+            document.getElementById("extra_images_section").innerHTML = additional_images_section;
+          }
+
+          // Now we are ready to get the data specific to this buying_id
+          // Check for pending_list
+          if (result.pending_count > 0) {
+            // If there is a pending_count > 0, there will be a pending_list
+            for (var i = 0; i < result['pending_list'].length; i++) {
+              // Get buying_id into a variable to check against this page's URL variable
+              var buying_id = result.pending_list[i].buying_id;
+              // Get the buying_id for the current item from the buyingid variable in the URL
+              var thisbuyingid = (getQueryVariable("buyingid"));
+              if (buying_id === thisbuyingid) {
+                // If we have the right one, get the data for display on page
+                // Yell at the console
+                var buyer_id = result.pending_list[i].buyer_id;
+                console.log("The Buying ID is " + buying_id + " the URL variable is " + thisbuyingid);
+                var quantity_purchased = escapeHtml(result.pending_list[i].quantity);
+                console.log("The quantity purchased is " + quantity_purchased);
+
+                // Set the currency for display in description block at top of page
+                var displayCurrency = 'BLX';
+                var displayPrice = result.pending_list[i].receivedAmount / 100000000; // Set the right decimal for NXT
+                sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+
+                if (result.pending_list[i].currency == Constants.coinoUsdAssetName) {
+                  displayCurrency = 'CoinoUSD';
+                  sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+                  displayPrice = result.pending_list[i].receivedAmount / 100; // Cahnge the decimal to be correct for CoinoUSD
+                }
+
+                var displayAmountWithCurrency = displayPrice + " " + displayCurrency;
+
+                document.getElementById("quantity_purchased").innerHTML = quantity_purchased;
+                document.getElementById("price").innerHTML = displayAmountWithCurrency;
+                var nxtDateSold = result.pending_list[i].sold_timestamp;
+                var convertedSoldMoment = moment(nxtEpoch).add('seconds', nxtDateSold);
+                var convertedSold = moment(convertedSoldMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+                document.getElementById("sold").innerHTML = convertedSold;
+                translated = $.t("pending"); // We know it's pending because it's in the pending_list
+                document.getElementById("status").innerHTML = translated;
+              }
+
+            } // End of for loop
+          } // End of if pending_count loop
+
+          // Check for sold_list
+          else if (result.sold_count > 0) {
+            // If there is a sold_count > 0, there will be a sold_list
+            for (var i = 0; i < result['sold_list'].length; i++) {
+              // Get buying_id into a variable to check against this page's URL variable
+              var buying_id = result.sold_list[i].buying_id;
+              // Get the buying_id for the current item from the buyingid variable in the URL
+              var thisbuyingid = (getQueryVariable("buyingid"));
+              if (buying_id === thisbuyingid) {
+                // If we have the right one, get the data for display on page
+                // Yell at the console
+                var buyer_id = result.sold_list[i].buyer_id;
+                console.log("The Buying ID is " + buying_id + " the URL variable is " + thisbuyingid);
+                var quantity_purchased = result.sold_list[i].quantity;
+                console.log("The quantity purchased is " + quantity_purchased);
+
+                // Set the currency for display in description block at top of page
+                var displayCurrency = 'BLX';
+                var displayPrice = result.sold_list[i].receivedAmount / 100000000;
+                var receivedAmount = result.sold_list[i].receivedAmount / 100000000;
+                sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+
+                if (result.sold_list[i].currency == Constants.coinoUsdAssetName) {
+                  displayCurrency = 'CoinoUSD';
+                  displayPrice = result.sold_list[i].receivedAmount / 100;
+                  receivedAmount = result.sold_list[i].receivedAmount / 100;
+                  sessionStorage.setItem("currency", displayCurrency); // Set the session storage variable for use in the conversion popover
+                }
+
+                var displayAmountWithCurrency = displayPrice + " " + displayCurrency;
+
+                document.getElementById("quantity_purchased").innerHTML = quantity_purchased;
+                document.getElementById("price").innerHTML = displayAmountWithCurrency;
+                var nxtDateSold = result.sold_list[i].sold_timestamp;
+                var convertedSoldMoment = moment(nxtEpoch).add('seconds', nxtDateSold);
+                var convertedSold = moment(convertedSoldMoment).format("dddd, MMMM Do YYYY, h:mm:ss a");
+                document.getElementById("sold").innerHTML = convertedSold;
+                translated = $.t("sold"); // We know it's sold because it's in the sold_list
+                document.getElementById("status").innerHTML = translated;
+              }
+
+            } // End of for loop
+          } // End of if sold_count loop
+
+        } // Close else statement
+      }, "json"); // Specifies JSON as the expected result
+  };
+  </script>
+  <!--End searchByItemID function-->
+
+</head>
+
+<body class="full-width" onload="setAccountNumber(); searchByItemID(); setLanguage();">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+
+                <div id="backToSearchButton">
+                  <button type="button" class="btn btn-default" onclick="backToSearch()"><i class="fa fa-arrow-left"></i><span data-i18n="button_back_to_search">Back to Search</span></button>
+                </div>
+
+              </header>
+              
+              <div class="panel-body">
+                <div id="successMessage">
+                  <!--Start of successMessage div-->
+
+                  <!--item widget start-->
+                  <aside class="profile-nav alt green-border">
+                    <section class="panel">
+                      <div class="user-heading alt green-bg">
+
+                        <span id="top_image"><a href="#"><img alt="" src="img/Box-icon.png"></a></span>
+
+                        <h1 id="title">No Item Title</h1>
+                        <p><span data-i18n="item_id">Item ID</span>: <span id="itemID"></span></p>
+                        <p><span data-i18n="seller_id">Seller ID</span>: <span id="seller_id"></span></p>
+                        <p><span data-i18n="status">Status</span>: <span id="status"></span></p>
+                        <br />
+                        <hr>
+                        <p><i class="fa fa-tasks"></i> <span data-i18n="category">Category</span>: <span id="category"></span></a>
+                        </p>
+                        <p><i class="fa fa-tags"></i> <span data-i18n="tags">Tags</span>: <span id="tags"></span></a>
+                        </p>
+                        <p><i class="fa fa-clock-o"></i> <span data-i18n="expiration">Expired</span>: <span id="expiration"></span></a>
+                        </p>
+                        <p><i class="fa fa-clock-o"></i> <span data-i18n="sold_date"></span>: <span id="sold"></span></a>
+                        </p>
+                        <p><i class="fa fa-signal"></i> <span data-i18n="quantity_purchased">Quantity Purchased</span>: <span id="quantity_purchased"></span></p>
+                        <p><i class="fa fa-money"></i> <span data-i18n="total_price">Price</span>: <span id="price"></span></a>
+                        </p>
+                        <hr>
+                        <p><span data-i18n="description">Description</span>
+                          <br /><span id="description"></span></p>
+                      </div>
+
+                    </section>
+                  </aside>
+                  <!--item widget end-->
+
+                  <div id="extra_images_section"></div>
+
+                </div>
+                <!--End of successMessage div-->
+              </div>
+            </section>
+          </div>
+        </div>
+        <!-- page end-->
+
+      </section>      
+    </section>
+  </section>
+  <!--main content end-->
+
+  <!-- js placed at the end of the document so the pages load faster -->
+  <script src="js/jquery-1.11.1.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+  <script src="js/bootstrap-hover-dropdown.min.js"></script>
+  <script src="js/respond.min.js"></script>
+
+  <!--common script for all pages-->
+  <script src="js/constants.js"></script>
+  <script src="js/freemarket_scripts.js"></script>
+  <script src="js/common-scripts.js"></script>
+  <script src="js/i18next-1.7.4.min.js"></script>
+  <script src="js/freemarket_localization_scripts.js"></script>
+  <script src="js/moment.min.js"></script>
+  <script src="js/pending_sales_notice.js"></script>
+  <!-- to prevent XSS attacks via the image URLs -->
+  <script src="js/validator.min.js"></script>
+
+</body>
+</html>

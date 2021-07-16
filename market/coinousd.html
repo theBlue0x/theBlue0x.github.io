@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <link rel="shortcut icon" href="img/favicon.png">
+
+  <title>Blue0x Market</title>
+
+  <!-- Bootstrap core CSS -->
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-reset.css" rel="stylesheet">
+  <!--external css-->
+  <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+
+  <!-- Custom styles for this template -->
+  <link href="css/style.css" rel="stylesheet">
+  <link href="css/style-responsive.css" rel="stylesheet" />
+
+  <!-- HTML5 shim and Respond.js IE8 support of HTML5 tooltipss and media queries -->
+  <!--[if lt IE 9]>
+  <script src="js/html5shiv.js"></script>
+  <script src="js/respond.min.js"></script>
+  <![endif]-->
+
+  <!--script>
+  function checkLogin() { // Redirect the user if the user is not already logged in
+    var loginStatus = sessionStorage.getItem("loginStatus");
+    if (loginStatus == 'notloggedin') {
+      localStorage.setItem("lastpage", "coinousd.html"); // set the page for the Continue button on Login Notice page
+      var fmlang = localStorage.getItem("fmlang");
+      window.location.href = 'login_notice.html' + '?setLng=' + fmlang;
+    }
+  };
+  </script>
+-->
+  <script>
+  var myVar = setInterval(function() {
+    getAccountSummary()
+  }, 60000); // Updates the balances every minute
+
+  function getAccountSummary() {
+    var loggedInAccount = sessionStorage.getItem("RSaccountNumber");
+    // POST the request
+    $.post(Constants.nxtpassApiUrl, {
+        requestType: 'accountInfo',
+        account: loggedInAccount
+      },
+
+      function(result) {
+
+        // Store the new account number and secret phrase in local storage
+        sessionStorage.setItem("numericalAccountNumber", result.accountNumber);
+        sessionStorage.setItem("RSaccountNumber", result.RSaccountNumber);
+        sessionStorage.setItem("accountBalance", result.effectiveBalanceNXT);
+
+        // Update the "user name" and balance
+        document.getElementById("username").innerHTML = sessionStorage.getItem("RSaccountNumber");
+        document.getElementById("accountBalance").innerHTML = 'Account Balance: <br />' + result.effectiveBalanceNXT;
+
+        // Display the new account numbers and remove the Log In button
+        var replace_loginResult = '';
+
+        replace_loginResult += '<div class="media-body">';
+        replace_loginResult += '<a class="p-head" href="#">Account ID</a>';
+        replace_loginResult += '<p>' + result.RSaccountNumber + '</p>';
+        replace_loginResult += '</div>';
+        replace_loginResult += '<div class="media-body">';
+        replace_loginResult += '<a class="p-head" href="#">Account Balance</a>';
+        replace_loginResult += '<p>NXT: ' + result.effectiveBalanceNXT + '</p>';
+        replace_loginResult += '</div>';
+
+        document.getElementById("loginResult").innerHTML = replace_loginResult;
+      }, "json"); // Specifies JSON as the expected result
+
+    // Get CoinoUSD balance for this account and display it
+    $.post(Constants.nxtpassApiUrl, {
+        requestType: 'callNxt',
+        requestTypeNxt: 'getAccountAssets',
+        account: loggedInAccount,
+        asset: Constants.coinoUsdAssetId
+      },
+
+      function(coinoquery) {
+        if (Object.keys(coinoquery.result).length == 0) {
+          // If this account does not have any CoinoUSD
+          console.log('There are no CoinoUSD assets associated with this account.');
+
+          // Display the CoinoUSD balance as zero
+          var replace_coinoUSDAccountBalance = '';
+          replace_coinoUSDAccountBalance += '<div class="media-body">';
+          replace_coinoUSDAccountBalance += '<a class="p-head" href="#">Account Balance</a>';
+          replace_coinoUSDAccountBalance += '<p>CoinoUSD: 0</p>';
+          replace_coinoUSDAccountBalance += '</div>';
+          document.getElementById("coinoUSDAccountBalance").innerHTML = replace_coinoUSDAccountBalance;
+        } else {
+          console.log("CoinoUSD Balance is " + coinoquery.result.quantityQNT);
+          var coinoUSDAccountBalance = coinoquery.result.quantityQNT;
+          sessionStorage.setItem("coinoUSDAccountBalance", coinoquery.result.quantityQNT);
+
+          // Convert it to decimal notation
+          var convertedCoinoUSDAccountBalance = coinoUSDAccountBalance / 100;
+
+          // Display the CoinoUSD balance
+          var replace_coinoUSDAccountBalance = '';
+          replace_coinoUSDAccountBalance += '<div class="media-body">';
+          replace_coinoUSDAccountBalance += '<a class="p-head" href="#">Account Balance</a>';
+          replace_coinoUSDAccountBalance += '<p>CoinoUSD: ' + convertedCoinoUSDAccountBalance + '</p>';
+          replace_coinoUSDAccountBalance += '</div>';
+          document.getElementById("coinoUSDAccountBalance").innerHTML = replace_coinoUSDAccountBalance;
+        }
+      }, "json"); // Specifies JSON as the expected result
+
+  }
+  </script>
+
+  <script>
+  function buyCoinoUSD() { // Display the information the user needs to buy CoinoUSD
+    // Variables for buying with BTC
+    var sendBTCWalletAddress = sessionStorage.getItem("sendBTCWalletAddress"); // Coinomat's BTC receiving address for this purchase
+    var sendBTCEndTimeOriginal = sessionStorage.getItem("sendBTCEndTime"); // This purchase is valid at the stated exchange rate until this time
+    var sendCoinoUSDToWallet = sessionStorage.getItem("sendCoinoUSDToWallet"); // The NXT wallet that will receive the CoinoUSD assets
+    // Variables for buying with NXT
+    var sendNXTWalletAddress = sessionStorage.getItem("sendNXTWalletAddress"); // Coinomat's NXT receiving address for this purchase
+    var sendNXTEndTimeOriginal = sessionStorage.getItem("sendNXTEndTime"); // This purchase is valid at the stated exchange rate until this time
+
+    // Determine what to do when the Buy button is clicked
+    if ($('#optionsBTC').is(':checked')) { // If this is a BTC buy, display BTC info
+      // Display the information
+      document.getElementById("buyResult1").innerHTML = "Send your BTC to this address: <b>" + sendBTCWalletAddress + "</b><br />" +
+        "The CoinoUSD assets will be sent to this NXT wallet: <b>" + sendCoinoUSDToWallet + "</b>.";
+    } else { // Otherwise, Make the purchase from the user's NXT wallet
+
+      // Disable the button while conversion is under way and display Processing... text
+      var processingText = $.t("button_processing");
+      document.getElementById("buyButtonSection1").innerHTML = "<button type=\"button\" id=\"buyButton1\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + processingText + "</button>";
+
+      // Get the amount to send
+      var getAmount = document.getElementById("value_to_convert").value;
+      var amount = getAmount * 100000000; // Convert to nxtQuant for use in callNxt below
+
+      // Get the "note" to include in the transaction's message field
+      var note = sessionStorage.getItem("sendNXTNote");
+      // Get the secret phrase
+      var secretPhraseCheck = document.getElementById("secretPhrase").value;
+      if (secretPhraseCheck == "") {
+        // If there is no secret phrase
+        // Alert the user that the secret phrase is required
+        document.getElementById("buySecretPhraseErrorMessage").innerHTML = "<p class=\"validation_message\">Your secret phrase is required.</p>";
+        document.getElementById("buyResult1").innerHTML = "";
+        // Replace the Processing... button with a working button again
+        document.getElementById("buyButtonSection1").innerHTML = "<div id=\"buyButtonSection1\"><button type=\"button\" id=\"buyButton1\" class=\"btn btn-success\" onclick=\"buyCoinoUSD();\"><div id=\"buyButtonText1\"></div></button></div> <!--End of buyButtonSection1 div--><br /><div id=\"buyResult1\"></div>";
+        setButtonText();
+
+      } else {
+
+        // Secret Phrase exists, so continue with purchase
+        $.post(Constants.nxtpassApiUrl, {
+            requestType: 'callNxt',
+            requestTypeNxt: 'sendMoney',
+            secretPhrase: secretPhraseCheck,
+            recipient: sendNXTWalletAddress,
+            amountNQT: amount,
+            feeNQT: 100000000,
+            deadline: 60,
+            message: note,
+            messageIsText: 'true'
+          },
+
+          function(response) {
+            var transactionNumber = response['result'].transaction;
+
+            // Clear the fields
+            document.getElementById("value_to_convert").value = "";
+            document.getElementById("secretPhrase").value = "";
+            // Clear error messages 
+            document.getElementById("buySecretPhraseErrorMessage").innerHTML = "";
+
+            // Replace the Processing... button with a working button again
+            document.getElementById("buyButtonSection1").innerHTML = "<div id=\"buyButtonSection1\"><button type=\"button\" id=\"buyButton1\" class=\"btn btn-success\" onclick=\"buyCoinoUSD();\"><div id=\"buyButtonText1\"></div></button></div> <!--End of buyButtonSection1 div--><br /><div id=\"buyResult1\"></div>";
+            setButtonText();
+            // Report the transaction number
+            document.getElementById("buyResult1").innerHTML = "The transaction has completed. Please note the transaction ID in case your coins do not arrive at their destination: <b>" + transactionNumber + "</b>";
+          }, "json");
+      } // End of else
+    } // End of else
+  }
+  </script>
+
+  <script>
+  function sellCoinoUSD() { // Display the information the user needs to sell CoinoUSD
+    // Variables for selling BTC
+    var getBTCWalletAddress = document.getElementById("receiving_address").value; // The user's BTC receiving address for this sale
+    var sendCoinoUSDToWallet = sessionStorage.getItem("sendCoinoUSDToWallet"); // Coinomat's wallet for sending CoinoUSD assets
+    // Variables for selling NXT
+    var getNXTWalletAddress = sessionStorage.getItem("sendNXTWalletAddress"); // The user's NXT receiving address for this purchase
+    var sendNXTEndTimeOriginal = sessionStorage.getItem("sendNXTEndTime"); // This purchase is valid at the stated exchange rate until this time
+      
+    
+    if ($('#optionsBTC').is(':checked')) { // If the target currency is BTC  
+	// Check for BTC wallet address
+      if (getBTCWalletAddress == "") {
+       	 document.getElementById("receivingAddressErrorMessage").innerHTML = "<p class=\"validation_message\">Your BTC wallet address is required.</p>";
+	      } else { // BTC walet address is present
+	      
+      // Disable the button while conversion is under way and display Processing... text
+      var processingText = $.t("button_processing");
+      document.getElementById("sellButtonSection1").innerHTML = "<button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + processingText + "</button>";
+
+      // Get the amount to send
+      var getAmount = document.getElementById("value_to_convert2").value;
+      var amount = getAmount * 100000000; // Convert to nxtQuant for use in callNxt below
+
+      // Get the "note" to include in the transaction's message field
+      var note = sessionStorage.getItem("getBTCNote");
+
+      // Get the secret phrase
+      var secretPhraseCheck = document.getElementById("secretPhrase2").value;
+      if (secretPhraseCheck == "") {
+        // If there is no secret phrase
+        // Alert the user that the secret phrase is required
+        document.getElementById("secretPhraseErrorMessage2").innerHTML = "<p class=\"validation_message\">Your secret phrase is required.</p>";
+        document.getElementById("sellResult").innerHTML = "";
+        // Replace the Processing... button with a working button again
+        document.getElementById("sellButtonSection1").innerHTML = "<div id=\"sellButtonSection1\"><button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\" onclick=\"sellCoinoUSD();\"><div id=\"sellButtonText1\"></div></button></div> <!--End of sellButtonSection1 div--><div id=\"sellResultBTC\"><br /><div id=\"sellResult\"></div>";
+        setButtonText();
+
+		// End of if no secret phrase
+		} else { 
+        // Secret Phrase exists, so continue with purchase
+
+		// Inform user of where the BTC will be sent
+        document.getElementById("sellResultBTC").innerHTML = "You will receive BTC at this address: <b>" + getBTCWalletAddress + "</b>.<br />";
+
+		// Get and create CoinoUSD to BTC tunnel  
+		createCoinoBTCTunnel();
+		
+        $.post(Constants.nxtpassApiUrl, {
+            requestType: 'callNxt',
+            requestTypeNxt: 'sendMoney',
+            secretPhrase: secretPhraseCheck,
+            recipient: sendCoinoUSDToWallet,
+            amountNQT: amount,
+            feeNQT: 100000000,
+            deadline: 60,
+            message: note,
+            messageIsText: 'true'
+          },
+          function(response) {
+            var transactionNumber = response['result'].transaction;
+
+            // Clear the fields
+            document.getElementById("value_to_convert2").value = "";
+            document.getElementById("secretPhrase2").value = "";
+            // Clear error messages 
+            document.getElementById("secretPhraseErrorMessage2").innerHTML = "";
+
+            // Replace the Processing... button with a working button again
+            document.getElementById("sellButtonSection1").innerHTML = "<div id=\"sellButtonSection1\"><button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\" onclick=\"buyCoinoUSD();\"><div id=\"sellButtonText1\"></div></button></div> <!--End of sellButtonSection1 div--><div id=\"sellResultBTC\"><br /><div id=\"sellResult\"></div>";
+            setButtonText();
+            // Report the transaction number
+            document.getElementById("sellResult").innerHTML = "The transaction has completed. Please note the transaction ID in case your coins do not arrive at their destination: <b>" + transactionNumber + "</b>";
+          }, "json");
+		}
+		} // End of else for wallet address check
+		
+    } else { // Not BTC, so continue with conversion of CoinoUSD to NXT
+	    
+      // Disable the button while conversion is under way and display Processing... text
+      var processingText = $.t("button_processing");
+      document.getElementById("sellButtonSection1").innerHTML = "<button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + processingText + "</button>";
+
+      // Get the amount to send
+      var getAmount = document.getElementById("value_to_convert2").value;
+      var amount = getAmount * 100000000; // Convert to nxtQuant for use in callNxt below
+
+      // Get the "note" to include in the transaction's message field
+      var note = sessionStorage.getItem("getNXTNote");
+      
+      // Get the secret phrase
+      var secretPhraseCheck = document.getElementById("secretPhrase2").value;
+      if (secretPhraseCheck == "") {
+        // If there is no secret phrase
+        // Alert the user that the secret phrase is required
+        document.getElementById("secretPhraseErrorMessage2").innerHTML = "<p class=\"validation_message\">Your secret phrase is required.</p>";
+        document.getElementById("sellResult").innerHTML = "";
+        // Replace the Processing... button with a working button again
+        document.getElementById("sellButtonSection1").innerHTML = "<div id=\"sellButtonSection1\"><button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\" onclick=\"sellCoinoUSD();\"><div id=\"sellButtonText1\"></div></button></div> <!--End of sellButtonSection1 div--><div id=\"sellResultBTC\"><br /><div id=\"sellResult\"></div>";
+        setButtonText();
+
+      } else {
+
+        // Secret Phrase exists, so continue with purchase
+        $.post(Constants.nxtpassApiUrl, {
+            requestType: 'callNxt',
+            requestTypeNxt: 'sendMoney',
+            secretPhrase: secretPhraseCheck,
+            recipient: sendCoinoUSDToWallet,
+            amountNQT: amount,
+            feeNQT: 100000000,
+            deadline: 60,
+            message: note,
+            messageIsText: 'true'
+          },
+
+          function(response) {
+            var transactionNumber = response['result'].transaction;
+
+            // Clear the fields
+            document.getElementById("value_to_convert2").value = "";
+            document.getElementById("secretPhrase2").value = "";
+            // Clear error messages 
+            document.getElementById("secretPhraseErrorMessage2").innerHTML = "";
+
+            // Replace the Processing... button with a working button again
+            document.getElementById("sellButtonSection1").innerHTML = "<div id=\"sellButtonSection1\"><button type=\"button\" id=\"sellButton1\" class=\"btn btn-success\" onclick=\"sellCoinoUSD();\"><div id=\"sellButtonText1\"></div></button></div> <!--End of sellButtonSection1 div--><div id=\"sellResultBTC\"><br /><div id=\"sellResult\"></div>";
+            setButtonText();
+            // Report the transaction number
+            document.getElementById("sellResult").innerHTML = "The transaction has completed. Please note the transaction ID in case your coins do not arrive at their destination: <b>" + transactionNumber + "</b>";
+          }, "json");
+      } // End of else
+    } // End of else
+  }
+  </script>
+
+  <script>
+  function setButtonText() { // Set button text on page load
+    // Translate the Convert button text
+    var translatedConvertButtonText = $.t("button_view_conversion");
+    document.getElementById("convertButtonText").innerHTML = translatedConvertButtonText;
+    document.getElementById("convertButtonText2").innerHTML = translatedConvertButtonText;
+
+    // Translate the Buy button text
+    var translatedBuyButtonText = $.t("button_buy_coinousd");
+    document.getElementById("buyButtonText1").innerHTML = translatedBuyButtonText;
+
+    // Translate the Sell button text
+    var translatedSellButtonText = $.t("button_sell_coinousd");
+    document.getElementById("sellButtonText1").innerHTML = translatedSellButtonText;
+  };
+  </script>
+
+  <script>
+  function setCurrencySymboltoBTC(obj) {
+    if (obj.checked) {
+      document.getElementById("symbol").innerHTML = "<i class=\"fa fa-btc\"></i>";
+      // Display deposit limit message
+      var btc_in_max = sessionStorage.getItem("buyBTCDepositLimit");
+      var btc_in_min = sessionStorage.getItem("buyBTCDepositMin");
+      var translatedDepositLimitText = $.t("deposit_limit");
+      document.getElementById("depositLimitMessage").innerHTML = translatedDepositLimitText + " <B>BTC " + btc_in_max + "</b>. (The minimum is BTC " + btc_in_min + ".)";
+      document.getElementById("buySecretPhrase").innerHTML = '';
+      document.getElementById("buySecretPhraseErrorMessage").innerHTML = "";
+      document.getElementById("buyResult1").innerHTML = "";
+      document.getElementById("conversionResult").innerHTML = "";
+    }
+  };
+  </script>
+  
+  <script>
+  function setCurrencySymboltoNXT(obj) {
+    if (obj.checked) {
+      document.getElementById("symbol").innerHTML = "NXT";
+      //getBuyDepositLimitNXT();
+      // Display deposit limit message
+      var nxt_in_max = sessionStorage.getItem("buyNXTDepositLimit");
+      var nxt_in_min = sessionStorage.getItem("buyNXTDepositMin");
+      var translatedDepositLimitText = $.t("deposit_limit");
+      document.getElementById("depositLimitMessage").innerHTML = translatedDepositLimitText + " <B>NXT " + nxt_in_max + "</b>. (The minimum is NXT " + nxt_in_min + ".)";
+      document.getElementById("buySecretPhrase").innerHTML = '<div class="form-group"><label for="secretPhrase"><span data-i18n="secret_phrase">Secret Phrase</span></label><div class="iconic-input"><i class="fa fa-key"></i><input type="password" class="form-control" id="secretPhrase" data-i18n="[placeholder]placeholder_required"><div id="secretPhraseErrorMessage"></div></div></div>';
+      document.getElementById("buyResult1").innerHTML = "";
+      document.getElementById("conversionResult").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script>
+  function setTargetCurrencytoBTC(obj) {
+    if (obj.checked) {
+      // Display deposit limit message
+      var coino_in_max = sessionStorage.getItem("sellBTCDepositLimit");
+      var coino_in_min = sessionStorage.getItem("sellBTCDepositMin");
+      var translatedDepositLimitText = $.t("deposit_limit");
+      var placeholder_required = $.t("placeholder_required");      
+      document.getElementById("depositLimitMessage2").innerHTML = translatedDepositLimitText + " <B>CoinoUSD " + coino_in_max + "</b>. (The minimum is CoinoUSD " + coino_in_min + ".)";
+      // Clear the conversion result, if it exists from a previous conversion
+      document.getElementById("conversionResult2").innerHTML = "";
+      // Display the BTC address input field
+      document.getElementById("btcReceivingAddress").innerHTML = "<div class=\"form-group\"><label for=\"receiving_address\"><div id=\"wallet_type\">BTC Wallet Address</div></label><div class=\"iconic-input\"><i class=\"fa fa-send\"></i><input type=\"text\" class=\"form-control\" placeholder="+placeholder_required+" id=\"receiving_address\"></div><div id=\"receivingAddressErrorMessage\"></div></div>";
+    }
+  };
+  </script>
+
+  <script>
+  function setTargetCurrencytoNXT(obj) { // Set the target currency to NXT, display the Coino min and max values to the user
+    if (obj.checked) {
+      // Display deposit limit message
+      var coino_in_max = sessionStorage.getItem("sellNXTDepositLimit");
+      var coino_in_min = sessionStorage.getItem("sellNXTDepositMin");
+      var translatedDepositLimitText = $.t("deposit_limit");
+      document.getElementById("depositLimitMessage2").innerHTML = translatedDepositLimitText + " <B>CoinoUSD " + coino_in_max + "</b>. (The minimum is CoinoUSD " + coino_in_min + ".)";
+      // Clear the conversion result, if it exists from a previous conversion
+      document.getElementById("conversionResult2").innerHTML = "";
+      // Hide the BTC wallet address field, as it is not needed for NXT
+      document.getElementById("btcReceivingAddress").innerHTML = ""; 
+      // Clear the sell BTC result, if it exists from a previous conversion
+      document.getElementById("sellResultBTC").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script>
+  function testFieldPrice(field) {
+    var regExpr = new RegExp("^[0-9]+(\.[0-9]{1,10})?$");
+    if (!regExpr.test(field.value)) {
+      // Case of error
+      field.value = "";
+      document.getElementById("value_to_convertErrorMessage").innerHTML = "<p class=\"validation_message\">The value may only contain numbers and a decimal.</p>";
+    } else {
+      document.getElementById("value_to_convertErrorMessage").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script>
+  function testFieldPrice2(field) {
+    var regExpr = new RegExp("^[0-9]+(\.[0-9]{1,10})?$");
+    if (!regExpr.test(field.value)) {
+      // Case of error
+      field.value = "";
+      document.getElementById("value_to_convertErrorMessage2").innerHTML = "<p class=\"validation_message\">The value may only contain numbers and a decimal.</p>";
+    } else {
+      document.getElementById("value_to_convertErrorMessage2").innerHTML = "";
+    }
+  };
+  </script>
+
+  <script>
+  // To convert a coin into CoinoUSD using Coinomat
+  function convertCoinsToCoinoUSD() {
+    // Get the value to convert
+    var value_to_convert = $('#value_to_convert').val();
+    // Get the currency to convert to
+    var currency = $("input[name=currencyChoice]:checked").val();
+    // Get the user's selected currency and perform the conversion and set the currency symbol
+    if (currency == 'btc') {
+      var currencySymbol = "BTC";
+      var buyDepositLimitCheck = sessionStorage.getItem("buyBTCDepositLimit"); // BTC
+      var buyDepositMinCheck = sessionStorage.getItem("buyBTCDepositMin"); // BTC
+      var conversionRate = sessionStorage.getItem("buyBTCxrate"); // BTC
+    } else {
+      var currencySymbol = "NXT";
+      var buyDepositLimitCheck = sessionStorage.getItem("buyNXTDepositLimit"); // NXT
+      var buyDepositMinCheck = sessionStorage.getItem("buyNXTDepositMin"); // NXT
+      var conversionRate = sessionStorage.getItem("buyNXTxrate"); // NXT
+    }
+    if (parseFloat(value_to_convert, 10) > buyDepositLimitCheck) { // Alert user to this fact
+      document.getElementById("depositLimitExceededMessage").innerHTML = "<p class=\"validation_message\">Value to Convert must be below the convert limit.</p>";
+      document.getElementById("value_to_convert").value = ""; // Reset the field to blank
+      document.getElementById("conversionResult").innerHTML = ""; // Don't leave a converted value message there either
+    } else if (parseFloat(value_to_convert, 10) < buyDepositMinCheck) { // Alert user to this fact
+      document.getElementById("depositLimitExceededMessage").innerHTML = "<p class=\"validation_message\">Value to Convert must be above the required minimum.</p>";
+      document.getElementById("value_to_convert").value = ""; // Reset the field to blank
+      document.getElementById("conversionResult").innerHTML = ""; // Don't leave a converted value message there either
+    } else {
+      // Clear any prior error messages
+      document.getElementById("depositLimitExceededMessage").innerHTML = "";
+      document.getElementById("value_to_convertErrorMessage").innerHTML = "";
+      // Clear previous conversion results
+      document.getElementById("conversionResult").innerHTML = "";
+
+      // Disable the button while conversion is under way and display Converting... text
+      var convertingText = $.t("button_processing");
+      document.getElementById("conversionButtonSection").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + convertingText + "</button>";
+
+      // Convert       
+      var convertedValue = value_to_convert * conversionRate;
+      var roundedconvertedValue = ((convertedValue * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(4); // Round it
+
+      // Re-enable the convert button
+      document.getElementById("conversionButtonSection").innerHTML = "<button type=\"button\" id=\"convertButton\" class=\"btn btn-success\" onclick=\"convertCoinsToCoinoUSD();\"><div id=\"convertButtonText\"></div></button>";
+      setButtonText();
+
+      // Display the result
+      var translatedPostConversionText = $.t("converted_value");
+      document.getElementById("conversionResult").innerHTML = "<br />" + translatedPostConversionText + " <b>CoinoUSD " + roundedconvertedValue + "</b>.";
+
+    } // End of else for deposit amount
+  };
+  </script>
+
+  <script>
+  // To convert CoinoUSD into coins using Coinomat
+  function convertCoinoUSDToCoins() {
+    // Get the value to convert
+    var value_to_convert = $('#value_to_convert2').val();
+    // Get the currency to convert to
+    var currency = $("input[name=currencyChoice2]:checked").val();
+    // Get the user's selected currency and perform the conversion and set the currency symbol
+    if (currency == 'btc') {
+      var currencySymbol = "BTC";
+      var sellDepositLimitCheck = sessionStorage.getItem("sellBTCDepositLimit"); // BTC
+      var sellDepositMinCheck = sessionStorage.getItem("sellBTCDepositMin"); // BTC
+      var conversionRate = sessionStorage.getItem("sellBTCxrate"); // BTC
+    } else {
+      var currencySymbol = "NXT";
+      var sellDepositLimitCheck = sessionStorage.getItem("sellNXTDepositLimit"); // NXT
+      var sellDepositMinCheck = sessionStorage.getItem("sellNXTDepositMin"); // NXT
+      var conversionRate = sessionStorage.getItem("sellNXTxrate"); // NXT
+    }
+    if (parseFloat(value_to_convert, 10) > sellDepositLimitCheck) { // Alert user to this fact
+      document.getElementById("depositLimitExceededMessage2").innerHTML = "<p class=\"validation_message\">Value to Convert must be below the convert limit.</p>";
+      document.getElementById("value_to_convert2").value = ""; // Reset the field to blank
+      document.getElementById("conversionResult2").innerHTML = ""; // Don't leave a converted value message there either
+    } else if (parseFloat(value_to_convert, 10) < sellDepositMinCheck) { // Alert user to this fact
+      document.getElementById("depositLimitExceededMessage2").innerHTML = "<p class=\"validation_message\">Value to Convert must be above the required minimum.</p>";
+      document.getElementById("value_to_convert2").value = ""; // Reset the field to blank
+      document.getElementById("conversionResult2").innerHTML = ""; // Don't leave a converted value message there either
+    } else {
+      // Clear any prior error messages
+      document.getElementById("depositLimitExceededMessage2").innerHTML = "";
+      document.getElementById("value_to_convertErrorMessage2").innerHTML = "";
+      // Clear previous conversion results
+      document.getElementById("conversionResult2").innerHTML = "";
+
+      // Disable the button while conversion is under way and display Converting... text
+      var convertingText = $.t("button_processing");
+      document.getElementById("conversionButtonSection2").innerHTML = "<button type=\"button\" id=\"convertButton2\" class=\"btn btn-success\"><i class=\"fa fa-refresh fa-spin\"></i> &nbsp;" + convertingText + "</button>";
+
+      // Convert       
+      var convertedValue = value_to_convert * conversionRate;
+      var roundedconvertedValue = ((convertedValue * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(2); // Round it
+
+      // Re-enable the convert button
+      document.getElementById("conversionButtonSection2").innerHTML = "<button type=\"button\" id=\"convertButton2\" class=\"btn btn-success\" onclick=\"convertCoinoUSDToCoins();\"><div id=\"convertButtonText2\"></div></button>";
+      setButtonText();
+
+      // Display the result
+      var translatedPostConversionText = $.t("converted_value");
+      document.getElementById("conversionResult2").innerHTML = "<br />" + translatedPostConversionText + " <b>" + currencySymbol + " "  + roundedconvertedValue + "</b>.";
+
+    } // End of else for deposit amount
+  };
+  </script>
+
+  <script>
+  function countdown(elementName, minutes, seconds) {
+    var element, endTime, hours, mins, msLeft, time;
+
+    function twoDigits(n) {
+      return (n <= 9 ? "0" + n : n);
+    }
+
+    function updateTimer() {
+      msLeft = endTime - (+new Date);
+      if (msLeft < 1000) {
+        element.innerHTML = "EXPIRED";
+      } else {
+        time = new Date(msLeft);
+        hours = time.getUTCHours();
+        mins = time.getUTCMinutes();
+        element.innerHTML = (hours ? hours + ':' + twoDigits(mins) : mins) + ':' + twoDigits(time.getUTCSeconds());
+        setTimeout(updateTimer, time.getUTCMilliseconds() + 500);
+      }
+    }
+
+    element = document.getElementById(elementName);
+    endTime = (+new Date) + 1000 * (60 * minutes + seconds) + 500;
+    updateTimer();
+  }
+  </script>
+
+  <script>
+  // Creates and gets a tunnel to Coinomat for BTC to CoinoUSD conversion
+  function createBTCTunnel() {
+    var createTunnelBaseURL = "https://coinomat.com/api/v1/create_tunnel.php?currency_from=BTC&currency_to=COINO";
+    var createTunnelWallet = sessionStorage.getItem("RSaccountNumber");
+    var createTunnelURL = createTunnelBaseURL + '&wallet_to=' + createTunnelWallet;
+    createTunnelURL += "&callback=?";
+
+    $.getJSON(createTunnelURL, // Create the Tunnel
+
+      function(result) {
+        var xt_id = result.tunnel_id; // Get the tunnel ID
+        var k1 = result.k1; // Get k1
+        var k2 = result.k2; // Get k2
+
+        // Use this information to build a tunnel to Coinomat, to get all the info we need to present to the user
+        // and to complete a conversion if the user decides to do so.
+        var getTunnelBaseURL = "https://coinomat.com/api/v1/get_tunnel.php";
+        var getTunnelURL = getTunnelBaseURL + '?xt_id=' + xt_id + '&k1=' + k1 + '&k2=' + k2 + "&tz=UTC";
+        getTunnelURL += "&callback=?";
+
+        $.getJSON(getTunnelURL, // Get the Tunnel
+
+          function(innerResult) {
+            var xt_id_check = innerResult.tunnel.xt_id; // Tunnel id, for checking; should match xt_id from above
+            var sendBTCToWallet = innerResult.tunnel.wallet_from; // Where to send the BTC for conversion
+            var btc_xrate_fixed = innerResult.tunnel.xrate_fixed; // BTC to CoinoUSD exchange rate, fixed for 30 minutes
+            var sendCoinoUSDToWallet = innerResult.tunnel.wallet_to; // NXT wallet that will receive the assets, should match user's logged in NXT account
+            var btc_in_min = innerResult.tunnel.in_min; // Minimum BTC to convert
+            var btc_in_max = innerResult.tunnel.in_max; // Maximum BTC to convert
+            var btc_untilTime = innerResult.tunnel.fixtm_till; // Tunnel is good until this time
+            var currency_from = innerResult.tunnel.currency_from; // Start currency, for checking; should be BTC
+            var currency_to = innerResult.tunnel.currency_to; // End asset, for checking; should be COINO
+
+            // Yell at the console
+            console.log('The BTC to Coino tunnel get has succeeded. The xt_id is ' + xt_id_check + ' and the BTC exchange rate is ' + btc_xrate_fixed + '.');
+
+            // Store information to display to user if user decides to buy CoinoUSD
+            sessionStorage.setItem("buyBTCDepositLimit", parseFloat(btc_in_max, 10));
+            sessionStorage.setItem("buyBTCDepositMin", parseFloat(btc_in_min, 10));
+            sessionStorage.setItem("buyBTCxrate", parseFloat(btc_xrate_fixed, 10));
+            sessionStorage.setItem("sendBTCWalletAddress", sendBTCToWallet);
+            sessionStorage.setItem("sendBTCEndTime", btc_untilTime);
+            sessionStorage.setItem("sendCoinoUSDToWallet", sendCoinoUSDToWallet);
+
+            // Update the information displayed to the user
+            var roundedbitcoinBuys = ((btc_xrate_fixed * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(2); // Round it        
+            document.getElementById("btcConversionRate").innerHTML = "<b>" + roundedbitcoinBuys + "</b> CoinoUSD";
+
+            // Display deposit limit message
+            var translatedDepositLimitText = $.t("deposit_limit");
+            document.getElementById("depositLimitMessage").innerHTML = translatedDepositLimitText + " <B>BTC " + btc_in_max + "</b>. (The minimum is BTC " + btc_in_min + ".)";
+
+            // Create and insert a countdown timer
+            // Now get the time since that timestamp
+            countdown("countdown", 30, 0);
+            countdown("countdown2", 30, 0);
+
+          }).error(function() {
+            // If no connection can be made to Coinomat, give an error message
+            // Display the error
+            document.getElementById("depositLimitMessage").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+        });
+
+      }).error(function() {
+        // If no connection can be made to Coinomat, give an error message
+        // Display the error
+        document.getElementById("depositLimitMessage").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+    });
+  };
+  </script>
+  
+  <script>
+  // Creates and gets a tunnel to Coinomat for NXT to CoinoUSD conversion
+  function createNXTTunnel() {
+    var createTunnelBaseURL = "https://coinomat.com/api/v1/create_tunnel.php?currency_from=NXT&currency_to=COINO";
+    var createTunnelWallet = sessionStorage.getItem("RSaccountNumber");
+    var createTunnelURL = createTunnelBaseURL + '&wallet_to=' + createTunnelWallet;
+    createTunnelURL += "&callback=?";
+
+    $.getJSON(createTunnelURL, // Create the Tunnel
+
+      function(result) {
+        var xt_id = result.tunnel_id; // Get the tunnel ID
+        var k1 = result.k1; // Get k1
+        var k2 = result.k2; // Get k2
+
+        // Use this information to build a tunnel to Coinomat, to get all the info we need to present to the user
+        // and to complete a conversion if the user decides to do so.
+        var getTunnelBaseURL = "https://coinomat.com/api/v1/get_tunnel.php";
+        var getTunnelURL = getTunnelBaseURL + '?xt_id=' + xt_id + '&k1=' + k1 + '&k2=' + k2 + "&tz=UTC";
+        getTunnelURL += "&callback=?";
+
+        $.getJSON(getTunnelURL, // Get the Tunnel
+
+          function(innerResult) {
+            var xt_id_check = innerResult.tunnel.xt_id; // Tunnel id, for checking; should match xt_id from above
+            var sendNXTToWallet = innerResult.tunnel.wallet_from.wallet; // Where to send the NXT for conversion
+            var nxt_xrate_fixed = innerResult.tunnel.xrate_fixed; // NXT to CoinoUSD exchange rate, fixed for 30 minutes
+            var sendCoinoUSDToWallet = innerResult.tunnel.wallet_to; // NXT wallet that will receive the assets, should match user's logged in NXT account
+            var nxt_in_min = innerResult.tunnel.in_min; // Minimum NXT to convert
+            var nxt_in_max = innerResult.tunnel.in_max; // Maximum NXT to convert
+            var nxt_untilTime = innerResult.tunnel.fixtm_till; // Tunnel is good until this time
+            var currency_from = innerResult.tunnel.currency_from; // Start currency, for checking; should be NXT
+            var currency_to = innerResult.tunnel.currency_to; // End asset, for checking; should be COINO
+            var sendNXTNote = innerResult.tunnel.wallet_from.note; // End asset, for checking; should be COINO                
+
+            // Yell at the console
+            console.log('The NXT to Coino tunnel get has succeeded. The xt_id is ' + xt_id_check + ' and the NXT exchange rate is ' + nxt_xrate_fixed + '.');
+
+            // Store information to display to user if user decides to buy CoinoUSD
+            sessionStorage.setItem("buyNXTDepositLimit", parseFloat(nxt_in_max, 10));
+            sessionStorage.setItem("buyNXTDepositMin", parseFloat(nxt_in_min, 10));
+            sessionStorage.setItem("buyNXTxrate", parseFloat(nxt_xrate_fixed, 10));
+            sessionStorage.setItem("sendNXTWalletAddress", sendNXTToWallet);
+            sessionStorage.setItem("sendNXTEndTime", nxt_untilTime);
+            sessionStorage.setItem("sendCoinoUSDToWallet", sendCoinoUSDToWallet);
+            sessionStorage.setItem("sendNXTNote", sendNXTNote);
+
+            // Update the information displayed to the user
+            var roundednxtBuys = ((nxt_xrate_fixed * Math.pow(10, 2)) / Math.pow(10, 2)).toFixed(2); // Round it        
+            document.getElementById("nxtConversionRate").innerHTML = "<b>" + roundednxtBuys + "</b> CoinoUSD";
+
+          }).error(function() {
+            // If no connection can be made to Coinomat, give an error message
+            // Display the error
+            document.getElementById("depositLimitMessage").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+        });
+
+      }).error(function() {
+        // If no connection can be made to Coinomat, give an error message
+        // Display the error
+        document.getElementById("depositLimitMessage").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+    });
+  };
+  </script>
+
+  <script>
+  // Creates and gets a tunnel to Coinomat for CoinoUSD to BTC conversion
+  function createCoinoBTCTunnel() {
+    var createTunnelBaseURL = "https://coinomat.com/api/v1/create_tunnel.php?currency_from=COINO&currency_to=BTC";
+    var createTunnelWallet = document.getElementById("receiving_address").value; // Get the user's BTC wallet address
+    var createTunnelURL = createTunnelBaseURL + '&wallet_to=' + createTunnelWallet;
+    createTunnelURL += "&callback=?";
+
+    $.getJSON(createTunnelURL, // Create the Tunnel
+
+      function(result) {
+        var xt_id = result.tunnel_id; // Get the tunnel ID
+        var k1 = result.k1; // Get k1
+        var k2 = result.k2; // Get k2
+
+        // Use this information to build a tunnel to Coinomat, to get all the info we need to present to the user
+        // and to complete a conversion if the user decides to do so.
+        var getTunnelBaseURL = "https://coinomat.com/api/v1/get_tunnel.php";
+        var getTunnelURL = getTunnelBaseURL + '?xt_id=' + xt_id + '&k1=' + k1 + '&k2=' + k2 + "&tz=UTC";
+        getTunnelURL += "&callback=?";
+
+        $.getJSON(getTunnelURL, // Get the Tunnel
+
+          function(innerResult) {
+            var xt_id_check = innerResult.tunnel.xt_id; // Tunnel id, for checking; should match xt_id from above
+            var sendCoinoToWallet = innerResult.tunnel.wallet_from; // Where to send the CoinoUSD for conversion
+            var btc_xrate_fixed = innerResult.tunnel.xrate_fixed; // CoinoUSD to BTC exchange rate, fixed for 30 minutes
+            var sendBTCToWallet = innerResult.tunnel.wallet_to; // User's BTC wallet that will receive the BTC
+            var coino_in_min = innerResult.tunnel.in_min; // Minimum Coino to convert
+            var coino_in_max = innerResult.tunnel.in_max; // Maximum Coino to convert
+            var btc_untilTime = innerResult.tunnel.fixtm_till; // Tunnel is good until this time
+            var currency_from = innerResult.tunnel.currency_from; // Start currency, for checking; should be COINO
+            var currency_to = innerResult.tunnel.currency_to; // Target currency, for checking; should be BTC
+            var getBTCNote = innerResult.tunnel.wallet_from.note; // Note from Coinomat                 
+
+            // Yell at the console
+            console.log('The BTC to Coino tunnel get has succeeded. The xt_id is ' + xt_id_check + ' and the BTC exchange rate is ' + btc_xrate_fixed + '.');
+
+            // Store information to use if user decides to sell CoinoUSD
+            sessionStorage.setItem("sellBTCDepositLimit", parseFloat(coino_in_max, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellBTCDepositMin", parseFloat(coino_in_min, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellBTCxrate", parseFloat(btc_xrate_fixed, 10));
+            sessionStorage.setItem("sendCoinoToWalletforBTC", sendCoinoToWallet); // Where to send CoinoUSD
+            sessionStorage.setItem("sendBTCEndTime", btc_untilTime);
+            sessionStorage.setItem("sendBTCToWallet", sendBTCToWallet); // User's BTC wallet
+            sessionStorage.setItem("getBTCNote", getBTCNote); // Transaction note for Coinomat for this CoinoUSD to BTC conversion
+
+          }).error(function() {
+            // If no connection can be made to Coinomat, give an error message
+            // Display the error
+            document.getElementById("depositLimitMessage2").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+        });
+
+      }).error(function() {
+        // If no connection can be made to Coinomat, give an error message
+        // Display the error
+        document.getElementById("depositLimitMessage2").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+    });
+  };
+  </script>
+
+  <script>
+  // Creates and gets a tunnel to Coinomat for CoinoUSD to NXT conversion
+  function createCoinoNXTTunnel() {
+    var createTunnelBaseURL = "https://coinomat.com/api/v1/create_tunnel.php?currency_from=COINO&currency_to=NXT";
+    var createTunnelWallet = sessionStorage.getItem("RSaccountNumber");
+    var createTunnelURL = createTunnelBaseURL + '&wallet_to=' + createTunnelWallet;
+    createTunnelURL += "&callback=?";
+
+    $.getJSON(createTunnelURL, // Create the Tunnel
+
+      function(result) {
+        var xt_id = result.tunnel_id; // Get the tunnel ID
+        var k1 = result.k1; // Get k1
+        var k2 = result.k2; // Get k2
+
+        // Use this information to build a tunnel to Coinomat, to get all the info we need to present to the user
+        // and to complete a conversion if the user decides to do so.
+        var getTunnelBaseURL = "https://coinomat.com/api/v1/get_tunnel.php";
+        var getTunnelURL = getTunnelBaseURL + '?xt_id=' + xt_id + '&k1=' + k1 + '&k2=' + k2 + "&tz=UTC";
+        getTunnelURL += "&callback=?";
+
+        $.getJSON(getTunnelURL, // Get the Tunnel
+
+          function(innerResult) {
+            var xt_id_check = innerResult.tunnel.xt_id; // Tunnel id, for checking; should match xt_id from above
+            var sendNXTFromWallet = innerResult.tunnel.wallet_from.wallet; // Where the NXT will come from
+            var nxt_xrate_fixed = innerResult.tunnel.xrate_fixed; // CoinoUSD to NXT exchange rate, fixed for 30 minutes
+            var sendNXTToWallet = innerResult.tunnel.wallet_to; // NXT wallet that will receive the NXT, should match user's logged in NXT account
+            var coino_in_min = innerResult.tunnel.in_min; // Minimum Coino to convert
+            var coino_in_max = innerResult.tunnel.in_max; // Maximum Coino to convert
+            var coino_untilTime = innerResult.tunnel.fixtm_till; // Tunnel is good until this time
+            var currency_from = innerResult.tunnel.currency_from; // Start currency, for checking; should be COINO
+            var currency_to = innerResult.tunnel.currency_to; // End currency, for checking; should be NXT
+            var getNXTNote = innerResult.tunnel.wallet_from.note; // Note from Coinomat                 
+
+            // Yell at the console
+            console.log('The Coino to NXT tunnel get has succeeded. The xt_id is ' + xt_id_check + ' and the Coino to NXT exchange rate is ' + nxt_xrate_fixed + '.');
+
+            // Store information to use if user decides to sell CoinoUSD
+            sessionStorage.setItem("sellNXTDepositLimit", parseFloat(coino_in_max, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellNXTDepositMin", parseFloat(coino_in_min, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellNXTxrate", parseFloat(nxt_xrate_fixed, 10));
+            sessionStorage.setItem("sendCoinoNXTWalletAddress", sendNXTToWallet); // Where to receive NXT
+            sessionStorage.setItem("sendCoinoEndTime", coino_untilTime);
+            sessionStorage.setItem("sendCoinoNXTFromWallet", sendNXTFromWallet); // The Coinomat NXT wallet
+            sessionStorage.setItem("getNXTNote", getNXTNote);
+
+          }).error(function() {
+            // If no connection can be made to Coinomat, give an error message
+            // Display the error
+            document.getElementById("depositLimitMessage2").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+        });
+
+      }).error(function() {
+        // If no connection can be made to Coinomat, give an error message
+        // Display the error
+        document.getElementById("depositLimitMessage2").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+    });
+  };
+  </script>
+
+  <script>
+  // Because getting a tunnel requires a BTC wallet address, this function exists to get conversion limits from Coinomat without a BTC address
+  function getCoinoUSDtoBTCinfo() { 
+	  var btcInfoURL = "https://coinomat.com/api/v1/get_xrate.php?f=COINO&t=BTC";
+        $.getJSON(btcInfoURL, // Get the min and max info from Coinomat
+
+          function(innerResult) {
+	        var coino_in_min = innerResult.in_min; // The minimum CoinoUSD
+	        var coino_in_max = innerResult.in_max; // The maximum CoinoUSD
+	        var coinoToBTCRate = innerResult.xrate; // The Coino to BTC exchange rate
+			var translatedDepositLimitText = $.t("deposit_limit");
+
+            // Yell at the console
+            console.log('The Coino to BTC info retrieval has succeeded. The Coino to BTC exchange rate is ' + coinoToBTCRate + '.');
+
+            // Store information to use if user decides to sell CoinoUSD
+            sessionStorage.setItem("sellBTCDepositLimit", parseFloat(coino_in_max, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellBTCDepositMin", parseFloat(coino_in_min, 10).toFixed(2)); // Rounded to two decimal places
+            sessionStorage.setItem("sellBTCxrate", parseFloat(coinoToBTCRate, 10));
+            
+            // Display the max and min CoinoUSD limits
+            // For display purposes, round the numbers
+            var coino_in_maxRound = parseFloat(coino_in_max, 10).toFixed(2);
+            var coino_in_minRound = parseFloat(coino_in_min, 10).toFixed(2);
+			document.getElementById("depositLimitMessage2").innerHTML = translatedDepositLimitText + " <B>CoinoUSD " + coino_in_maxRound + "</b>. (The minimum is CoinoUSD " + coino_in_minRound + ".)";
+	          
+	    }).error(function() {
+        // If no connection can be made to Coinomat, give an error message
+        // Display the error
+        document.getElementById("depositLimitMessage2").innerHTML = "<p class=\"validation_message\">There was an error contacting Coinomat.</p>";
+        });
+  };	  
+  </script>	
+
+</head>
+
+<body class="full-width" onload="setLanguage(); setButtonText(); setAccountNumber(); checkLogin(); getAccountSummary(); createBTCTunnel(); createNXTTunnel(); createCoinoNXTTunnel(); getCoinoUSDtoBTCinfo(); ">
+
+  <section id="container" class="">
+
+    <!--include main menu-->
+    <script type="text/javascript" src="js/menu.js">
+    </script>
+    <!--end include main menu-->
+
+
+    <!--main content start-->
+    <section id="main-content">
+      <section class="wrapper">
+        <!-- page start-->
+        <div class="row">
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <b>Account Information</b>
+              </header>
+              <div class="panel-body">
+
+                <div id="loginResult"></div>
+                <div id="coinoUSDAccountBalance"></div>
+
+              </div>
+            </section>
+          </div>
+
+          <div class="col-lg-12">
+            <section class="panel">
+              <header class="panel-heading">
+                <b>Current Conversion Rates</b>
+              </header>
+              <div class="panel-body">
+                <div id="conversionRateError">
+
+                  <table id="tfhover" border="0" cellpadding="2" cellspacing="5" width="450px">
+                    <tr>
+                      <th width="150"><img src="img/coins_logos/bitcoin.png" width="100"></th>
+                      <th width="150"><img src="img/coins_logos/nxt.png" width="100"></th>
+                    </tr>
+                    <tr>
+                      <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                      <td>1 Bitcoin equals</td>
+                      <td>1 NXT equals</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div id="btcConversionRate"></div>
+                      </td>
+                      <td>
+                        <div id="nxtConversionRate"></div>
+                      </td>
+                    </tr>
+                  </table>
+                  <br />
+                  <i>Conversion services provided by Coinomat.com.</i>
+                </div>
+              </div>
+            </section>
+          </div>
+
+<!-- !Buy CoinoUSD section -->
+
+          <div class="col-md-6">
+            <section class="panel">
+              <header class="panel-heading">
+                <b><span data-i18n="buy_coinousd">Buy CoinoUSD</span></b>
+              </header>
+              <div class="panel-body">
+
+                <p><span data-i18n="select_starting_currency">Select your starting currency.</span></p>
+
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice" id="optionsBTC" value="btc" onclick="setCurrencySymboltoBTC(this);" checked> Bitcoin
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice" id="optionsNXT" value="nxt" onclick="setCurrencySymboltoNXT(this);"> NXT
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="value_to_convert"><span data-i18n="value_to_convert">Value to Convert</span></label>
+                  <div class="input-group m-bot15">
+                    <span class="input-group-addon"><div id="symbol"><i class="fa fa-btc"></i></div></span>
+                    <input type="text" pattern="[0-9.]+" onblur="testFieldPrice(this);" class="form-control" data-i18n="[placeholder]placeholder_required" id="value_to_convert">
+                  </div>
+                  <div id="depositLimitExceededMessage"></div>
+                  <div id="depositLimitMessage"></div>
+                  <div id="value_to_convertErrorMessage"></div>
+                </div>
+
+                <div id="conversionButtonSection">
+                  <button type="button" id="convertButton" class="btn btn-success" onclick="convertCoinsToCoinoUSD();">
+                    <div id="convertButtonText"></div>
+                  </button>
+                </div>
+
+                <div id="conversionResult"></div>
+                <hr />
+
+                <div id="buySecretPhrase">
+                </div>
+
+                <div id="buySecretPhraseErrorMessage">
+                </div>
+
+                <div id="buyButtonSection1">
+                  <button type="button" id="buyButton1" class="btn btn-success" onclick="buyCoinoUSD();">
+                    <div id="buyButtonText1"></div>
+                  </button>
+                </div>
+                <br />
+
+                <div id="buyResult1"></div>
+                This exchange rate is good for: <b><span id='countdown'></span></b>
+              </div>
+          </div>
+
+<!-- !Sell CoinoUSD section -->
+
+          <div class="col-md-6">
+            <section class="panel">
+              <header class="panel-heading">
+                <b><span data-i18n="sell_coinousd">Sell CoinoUSD</span></b>
+              </header>
+              <div class="panel-body">
+
+			  	<p class="validation_message">This feature is not yet available.</p>
+                <p><span data-i18n="select_target_currency">Select your target currency.</span></p>
+
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice2" id="optionsBTC2" value="btc" onclick="setTargetCurrencytoBTC(this);" checked disabled> Bitcoin
+                  </label>
+                </div>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="currencyChoice2" id="optionsNXT2" value="nxt" onclick="setTargetCurrencytoNXT(this);" disabled> NXT
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label for="value_to_convert2"><span data-i18n="value_to_convert2">Value to Convert</span></label>
+                  <div class="input-group m-bot15">
+                    <span class="input-group-addon">CoinoUSD</span>
+                    <input type="text" disabled pattern="[0-9.]+" onblur="testFieldPrice2(this);" class="form-control" data-i18n="[placeholder]placeholder_required" id="value_to_convert2">
+                  </div>
+                  <div id="depositLimitExceededMessage2"></div>
+                  <div id="depositLimitMessage2"></div>
+                  <div id="value_to_convertErrorMessage2"></div>
+                </div>
+
+                <div id="conversionButtonSection2">
+                  <button type="button" id="convertButton2" class="btn btn-success" onclick="convertCoinoUSDToCoins();" disabled>
+                    <div id="convertButtonText2"></div>
+                  </button>
+                </div>
+
+                <div id="conversionResult2"></div>
+                <hr />
+
+				<div id="btcReceivingAddress">
+                <div class="form-group">
+                  <label for="receiving_address">
+                    <div id="wallet_type">BTC Wallet Address</div>
+                  </label>
+                  <div class="iconic-input">
+                    <i class="fa fa-send"></i>
+                    <input type="text" class="form-control" data-i18n="[placeholder]placeholder_required" id="receiving_address" disabled>
+                  </div>
+                  <div id="receivingAddressErrorMessage"></div>
+                </div>
+				</div>
+
+                <div class="form-group">
+                  <label for="secretPhrase2"><span data-i18n="secret_phrase">Secret Phrase</span></label>
+                  <div class="iconic-input">
+                    <i class="fa fa-key"></i>
+                    <input type="password" class="form-control" id="secretPhrase2" data-i18n="[placeholder]placeholder_required" disabled>
+                    <div id="secretPhraseErrorMessage2"></div>
+                  </div>
+                </div>
+
+                <div id="sellButtonSection1">
+                  <button type="button" id="sellButton1" class="btn btn-success" onclick="sellCoinoUSD();" disabled>
+                    <div id="sellButtonText1"></div>
+                  </button>
+                </div>
+                <br />
+
+                <div id="sellResultBTC"></div>
+                <br />
+                <div id="sellResult"></div>
+                This exchange rate is good for: <b><span id='countdown2'></span></b>
+              </div>
+              </div>
+          </div>
+
+          </section>
+        </div>
+
+        <!-- page end-->
+        </section>
+        </div>
+      </section>
+    </section>
+    <!--main content end-->
+
+    <!-- js placed at the end of the document so the pages load faster -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.dcjqaccordion.2.7.min.js"></script>
+    <script src="js/bootstrap-hover-dropdown.min.js"></script>
+    <script src="js/respond.min.js"></script>
+
+    <!--common script for all pages-->
+    <script src="js/constants.js"></script>
+    <script src="js/freemarket_scripts.js"></script>
+    <script src="js/common-scripts.js"></script>
+    <script src="js/i18next-1.7.4.min.js"></script>
+    <script src="js/freemarket_localization_scripts.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/pending_sales_notice.js"></script>
+
+</body>
+</html>

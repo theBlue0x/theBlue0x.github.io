@@ -13,7 +13,7 @@ var Constants = (function(Constants, $, undefined) {
 
   Constants.coinoUsdAssetName = "a:" + Constants.coinoUsdAssetId;
 
-  Constants.nxtpassApiUrl = 'https://wallet.blue0x.io/nxt';
+  Constants.nxtpassApiUrl = '';
 
   // 2 weeks default listing duration
   Constants.listingDurationDefault = 2 * 7 * 24 * 60 * 60;

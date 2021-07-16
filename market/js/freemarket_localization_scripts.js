@@ -270,7 +270,7 @@ var resources = {
       "button_sell_coinousd": "Sell USDX",
       "deposit_limit": "The convert limit is:",
       "your_wallet_address": "Wallet Address",
-      "alert_1": "NOTE: THE LISTING FEE IS CURRENTLY SET TO 0 BLX.",
+      "alert_1": "NOTE: THIS IS NOT A WORKING PAGE. DO NOT USE!",
       "select_item_currency": "Item Currency",
       "item_currency": "Currency"
     }
